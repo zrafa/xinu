@@ -1,0 +1,443 @@
+
+Tema 3.
+Administración de Memoria.
+
+1. Introducción.
+
+En un sistema de cómputo, la memoria se divide en dos partes, una para el sistema operativo (lo que ocupa el
+núcleo) y otra para los procesos que se ejecutan. 
+
+Para administrar la memoria que se asigna a los procesos existen diversos algoritmos.
+
+La función del sistema operativo es llevar la pista de la localización y tamaño del espacio libre de memoria,
+asignarlo bajo demanda y recuperarlo cuando el proceso concluya su trabajo.
+
+En sistemas con gran cantidad de procesos, la memoria es multiplexada entre los procesos que la requieren. Se
+puede multiplexar usando algoritmos de intercambio donde procesos enteros o parciales son escritos a un 
+almacenamiento secundario. La memoria del proceso se divide en páginas y se almacenan en disco aquellas que menos
+se utilicen.
+
+El sistema operativo, además de multiplexar la memoria, permite definir espacios virtuales de dirección, dando
+la imagen a cada proceso que tiene un espacio de memoria único e independiente de los demás procesos. El sistema
+operativo se administrar de tal manera que contiene algunas paginas en memoria real o física y otras paginas en
+memoria secundadira o area de intercambio o swap. Cuando un proceso neceista referencia una localidad de memoria
+virtual, el hardware tiene tablas de mapeo que permiten determinar si la pagina en la cual reside la
+localidad de memoria esta en memoria principal, y si no, el sistema operativo suspende al proceso y carga la
+página e intercambia otras paginas al almacenamiento secundario; y cuando la página es recuperada, el proceso 
+continua.
+
+El esquema de paginación para que sea eficiente requiere de soporte de hardware. 
+
+El sistema de hardwaqre como parte de la administración de la memoria debe proteger que un proceso no intervenga con
+la memoria de otro.
+
+2. Administración de memoria en arquitectura x86.
+
+La arquitectura 8088 no maneja espacios de memoria virtual ni protección de memoria. 
+
+Arquitecturas a partir de 80386 permiten utilizar esquemas de hardware para manipular la memoria.
+
+Dado que el sistema operativo Xinu fue diseñado para arquitectura 8088, supone que no tiene auxilio del hardware y
+por tanto el sistema operativo y los procesos ocupan el mismo espacio de memoria.
+
+
+===============================================================
+codigo | datos | pila de procesos | Espacio Libre
+===============================================================
+
+Este esquema tiene la desventaja que la seguridad del sistema operativo es mínima y puede ser atacado por aquellos
+procesos que de manera voluntaria o involuntaria quieran escribir a la memoria del núcleo.
+
+Pero este esquema permite que los procesos puedan compartir los mismos datos, por lo menos de manera indirecta por 
+medio de apuntadores; y también simplifica el manejo de la administración de memoria.
+
+3. Partición de la memoria.  
+
+La tarea principal del sistema de administración de memoria es cargar los programas en la memoria principla para
+su ejecución en el procesador. En casi todos los sistemas multitarea usan el esquema de memoria virtual, que se
+basa en paginación o segmentación.
+
+Existen otras técnicas sencillas para el manejo de memoria, una de ellas es la partición, que consiste en dividir
+la memoria en múltiples particiones, posiblemente desiguales. 
+Existen dos esquemas para particionar un sistema, estático y dinámico.
+En la partición estática, se supone que el sistema operativo ocupa una parte fija de la memoria principal y la 
+memoria sobrante se deja disponible para varios procesos. Si el sobrante se subdivide en un número predeterminado 
+de regiones con límites fijos se genera un sistema de particiones estáticas, lo cual es muy simple de manejar por el sistema operativo pero 
+lleva a un empleo ineficiente de la memoria, dado que se pueden asignar espacios de memoria grandes a programas
+que ocupen espacios pequeños, este fenomeno se conoce fragmentación interna.
+
+La partición dinámica consiste en dividir la memoria en particiones variables en número y longitud. Esto lleva
+ a que cuando se carga un proceso a memoria principal, se le asigna exactamente tanta memoria como necesita, 
+permitiendo un manejo eficiente de la memoria. 
+
+Para entender este mecanismo, se puede suponer un ejemplo que maneja 64 MB de memoria principal. Inicialmente la
+memoria principal está vacia, salvo que tiene el sistema operativo cargado
+
+================================================================================================
+SO | Espacio Libre
+================================================================================================
+
+Si se cargan 3 procesos y cada uno ocupa un espacio contiguo, a partir del area final del sistema operativo
+
+================================================================================================
+SO | Proceso 1 | Proceso 2 | Proceso 3|Espacio Libre
+================================================================================================
+
+Los tamaños de memoria por proceso son
+SO        -  8 MB
+Proceso 1 - 20 MB
+Proceso 2 - 14 MB
+Proceso 3 - 18 MB
+Espacio Libre - 4 MB
+
+
+Suponiendo que el sistema operativo recibe la peticion de alojar a un cuarto proceso, de 8 MB. Si el sistema 
+operativo tiene la capacidad de multiplexar la memoria, puede elegir intercambiar el proceso 2 por el proceso 4,
+quedando la siguiente organización 
+
+================================================================================================
+SO | Proceso 1 | Proceso 4|Espacio Libre | Proceso 3|Espacio Libre
+================================================================================================
+
+
+Los tamaños de memoria por proceso son
+SO        -  8 MB
+Proceso 1 - 20 MB
+Proceso 4 - 8 MB
+Espacio   - 6 MB
+Libre
+Proceso 3 - 18 MB
+Espacio
+Libre	  - 4 MB
+
+Por demanda, el sistema operativo podria necesitar al proceso 2 de nuevo en memoria, y decide intercambiarlo por
+el proceso 1
+
+================================================================================================
+SO | Proceso 2 |Espacio Libre| Proceso 4|Espacio Libre | Proceso 3|Espacio Libre
+================================================================================================
+Los tamaños de memoria por proceso son
+SO        -  8 MB
+Proceso 2 - 14 MB
+Espacio   - 6 MB
+Libre
+Proceso 4 - 8 MB
+Espacio   - 6 MB
+Libre
+Proceso 3 - 18 MB
+Espacio
+Libre	  - 4 MB
+
+En total exiten 16 MB de memoria libre, pero repartido en huecos pequeños de memoria. Si llegara un proceo que
+necesitara 10 MB de memoria, bajo este esquema se buscaria un intercambio con otro proceso.
+
+El sistema operativo tiene un problema en el que la memoria está fragmentada en huecos, esto se conoce como
+fragmentación externa.
+
+La manera para poder vencer este problema es utilizar una técnica llamada compactación, que consiste en reubicar
+los procesos para que queden contiguos, procurando que la memoria libre quede en un bloque. Para poder aplicar
+esta técnica se debe dar la capacidad de reubicar dinámicamente a los procesos que ya existían, cambiando su
+dirección en memoria.
+
+Dado que la compactación de memoria consume tiempo, el diseñador del sistema operativo tiene que decidir 
+adecuadamente cómo asignar un proceso a memoria (como llenar los huecos). Cuando llega el momento de cargar o
+traer un proceso a memoria principal, y si hay libre más de un blqoue de memoria de tamaño suficiente, el sistema
+operativo debe decidir cual asignar.
+
+Existen 3 algoritmos de ubicación de la memoria de un prcoes
+El del mejor ajuste o best fit
+El del primer ajuste o first fit
+El del siguiente ajuste o next fit
+
+Todos ellos se limitan a elegir entre los bloques de memoria libres que son mayores o iguales que el proceso a
+cargar. El mejor ajuste elige el bloque de tamaño más proximo al solicitado. El primer ajuste comienza recorriendo
+la memoria desde el principio y escoge el primer bloque disponible que sea suficientemente grande. El siguiente
+ajuste recorre la memoria desde el lugar de la última ubicación y elige el siguiente bloque disponible que sea
+suficientemente grande.
+
+Suponiendo el siguiente esquema de memoria, con 8 procesos en memoria
+
+================================================================================================
+8M|Proc1|12M|Proc 2|22M|Proc 3|18 M|Proc 4|Proc 5|8M|Proc6|6M|Proc7|14M|Proc8|36M
+================================================================================================
+
+El ultimo bloque asignado fue el de Proc 5, con 14K. Se necesita un bloque de 16 M para el proceso 9
+
+Aplicando cada criterio de ubicación
+
+First Fit
+
+================================================================================================
+8M|Proc1|12M|Proc 2|Proc 9|6M|Proc 3|18 M|Proc 4|Proc 5|8M|Proc6|6M|Proc7|14M|Proc8|36M
+================================================================================================
+
+Best Fit
+
+================================================================================================
+8M|Proc1|12M|Proc 2|22M|Proc 3|Proceso 9|2M|Proc 4|Proc 5|8M|Proc6|6M|Proc7|14M|Proc8|36M
+================================================================================================
+
+Next Fit
+================================================================================================
+8M|Proc1|12M|Proc 2|22M|Proc 3|18 M|Proc 4|Proc 5|8M|Proc6|6M|Proc7|14M|Proc8|Proc9|20 M
+================================================================================================
+
+En los estudios realizados sobre estos algoritmos, se ha concluido que el algoritmo de mejor ajuste es más lento
+y genera una mayor fragmentación externa dado que llena la memoria de pequeños agujeros inútiles. 
+El algoritmo de primer ajuste ha demostrado ser el mejor, dado que es más rapido y no genera agujeros inútiles.
+
+
+4. Requerimientos de administración de memoria en Xinu
+
+El sistema operativo Xinu tiene un modelo en el cual el código de todos los procesos y los datos son fijos 
+(dado que no tiene un esquema de cargado dinámico de programas). Pero cada proceso necesita espacio para la pila
+para contener variables locales y poder pedir espacio dinámico a partir de un cúmulo o heap de memoria. 
+
+Por tanto, Xinu debe encargarse de administrar la memoria libre, asignar espacio para la pila y el cúmulo, y
+llevar el registro de la memoria que se ha liberado. La memoria libre se debe tratar como un recurso finito y
+el sistema solo otorga la memoria hasta donde puede satisfacer; si un proceso no puede obtener memoria, el debe
+decidir cuando tratar de nuevo.
+
+Un principio básico es que un proceso debe liberar el almacenamiento que pide al heap antes de concluir su trabajo.
+Y el sistema operativo debe ser responsable de liberar la pila de un proceso cuando este termina.
+
+La pila y el cumulo de memoria de un proceso están de extemo a extremo del espacio asignado a un proceso
+
+5. Administración de memoria con listas enlazadas.
+
+Para administrar la memoria se puede mantener una lista enlazada de particiones de memoria libres.
+
+En la lista ligada se almacena la longitud de la partición y el apuntador al siguiente bloque. 
+
+La asignación de memoria consiste entonces en escribir algoritmos para obtener memoria y liberar memoria.
+
+5. Administración de memoria en Xinu
+
+La estructura de datos que define la adminstración de bloques libres en Xinu, se llama mblock, su definición
+está en el archivo mem.h
+
+/* mem.h - roundew, truncew, getstk, freestk */
+
+/*----------------------------------------------------------------------
+ * roundew, truncew - round or truncate address to next even word 
+ *----------------------------------------------------------------------
+ */
+#define	roundew(x)	( (3 + (WORD)(x)) & (~3) )
+#define	truncew(x)	( ((WORD)(x)) & (~3) )
+
+#define getstk(n)	getmem(n)
+#define freestk(b,s)	freemem(b,s)
+
+typedef struct	mblock	{
+	struct	mblock	*mnext;
+	word	mlen;
+} MBLOCK;
+
+#define	end	endaddr			/* avoid C library conflict	*/
+
+extern	MBLOCK	memlist;		/* head of free memory list	*/
+extern	char	*maxaddr;		/* max memory address		*/
+extern	char	*end;			/* address beyond loaded memory	*/
+
+#define MMAX	65024			/* maximum memory size		*/
+#define	MBLK	512			/* block size for global alloc	*/
+#define	MMIN	8192			/* minimum Xinu allocation	*/
+#define MDOS	1024			/* save something for MS-DOS	*/
+
+extern	char	*getmem();
+extern	int	freemem();
+
+
+Las macros roundew y truncew validan que solo bloques de 2 palabras (4 bytes) o más sean enlazados a la lista
+libre, es decir, Xinu no asigna pequeñas cantidades de memoria. Dichas macros permiten redondear o truncar a un
+número par de palabras la memoria requerida, haciendo el numero de bytes multiplos de cuatro
+
+La variable global memlist contiene la entrada inicial de la lista.
+La variable maxaddr contiene la direccion mas alta de memoria.
+
+El siguiente programa muestra el uso de las macros asi como el mapa de memoria libre
+
+
+6. Ubicación de memoria en Xinu.
+
+El algoritmo de ubicación funciona en Xinu, con interrupciones desactivadas.
+Aplica un algoritmo de First Fit (previo redondeo de bytes)
+
+Existen dos casos 
+
++ Encuentra exactamente la memoria requerida. Aqui basicamente borra de la lista de memoria libre al elemento
+asignado y retorna la direccion del bloque asignado.
++ Encuentra un bloque de memoria mas grande, el algoritmo particiona el bloque, quitando los bytes asignados 
+de la longitud del bloque
+
+/* getmem.c - getmem */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  getmem  --  allocate heap storage, returning lowest integer address
+ *------------------------------------------------------------------------
+ */
+char *getmem(nbytes)
+word nbytes;
+{
+	int	ps;
+	struct	mblock	*p, *q, *leftover;
+
+	disable(ps);
+	if ( nbytes==0 ) {
+		restore(ps);
+		return( NULL );
+	}
+	nbytes = roundew(nbytes);
+	for ( q=&memlist, p=q->mnext ;
+		(char *)p != NULL ;
+		q=p, p=p->mnext )
+		if ( p->mlen == nbytes) {
+			q->mnext = p->mnext;
+			restore(ps);
+			return( (char *) p );
+		} else if ( p->mlen > nbytes ) {
+			leftover = (struct mblock *)( (char *)p + nbytes );
+			q->mnext = leftover;
+			leftover->mnext = p->mnext;
+			leftover->mlen = p->mlen - nbytes;
+			restore(ps);
+			return( (char *) p );
+		}
+	restore(ps);
+	return( NULL );
+}
+
+El siguiente programa muestra el uso de asignacion de memoria 
+
+
+#include 
+#include 
+
+imprimirMem()
+{
+  struct mblock * p = NULL;
+
+  for(p=&memlist;(char *)p!=NULL;p=p->mnext) {
+	printf("mlen %u mcurrent %x mnext %x\n",p->mlen,p,p->mnext);
+  }
+}
+xmain()
+{
+  imprimirMem();
+  printf("Direccion asignada por getmem %x\n",getmem(1024));
+  imprimirMem();
+  printf("Direccion asignada por getmem %x\n",getmem(3011));
+  imprimirMem();
+  printf("Direccion asignada por getmem %x\n",getmem(34800));
+  imprimirMem();
+  xdone();
+  return 0;
+
+
+}
+
+
+7. Liberación de memoria en Xinu
+
+Para liberar memoria basta con indicar la direccion de la memoria a liberar y el tamaño en palabras a liberar.
+
+Xinu cuando libera memoria inserta en la lista de bloques libres un nodo, indicando el tamaño disponible y
+tratando de coincidir con algún bloque de memoria adyacente con el fin de evitar una fragmentación externa de
+huechos pqeueños.
+
+
+/* freemem.c - freemem */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  freemem  --  free a memory block, returning it to memlist
+ *------------------------------------------------------------------------
+ */
+SYSCALL	freemem(block, size)
+char *block;
+word size;
+{
+	int	ps;
+	struct	mblock	*p, *q;
+	char	*top;
+
+	size = roundew(size);
+	block = (char *) truncew( (word)block );
+	if ( size==0 || block > maxaddr || (maxaddr-block) < size ||
+		block < end )
+		return(SYSERR);
+	disable(ps);
+	(char *)q = NULL;
+	for( p=memlist.mnext ;
+		(char *)p != NULL && (char *)p < block ;
+		q=p, p=p->mnext )
+			;
+	if ( (char *)q != NULL && (top=(char *)q+q->mlen) > block
+		    || (char *)p != NULL && (block+size) > (char *)p ) {
+		restore(ps);
+		return(SYSERR);
+	}
+	if ( (char *)q != NULL && top == block )
+		q->mlen += size;
+	else {
+		((struct mblock *)block)->mlen = size;
+		((struct mblock *)block)->mnext = p;
+		memlist.mnext = (struct mblock *)block;
+		(char *)q = block;
+	}
+	/* Note that q != NULL here */
+	if ( (char *)p != NULL
+		&& ((char *)q + q->mlen) == (char *)p ) {
+		q->mlen += p->mlen;
+		q->mnext = p->mnext;
+	}
+	restore(ps);
+	return(OK);
+}
+
+El siguiente programa muestra el uso de liberacion de memoria
+
+#include 
+#include 
+
+imprimirMem()
+{
+  struct mblock * p = NULL;
+
+  for(p=&memlist;(char *)p!=NULL;p=p->mnext) {
+	printf("mlen %u mcurrent %x mnext %x\n",p->mlen,p,p->mnext);
+  }
+  return 0;
+}
+xmain()
+{
+¿
+  char * add1,*add2,*add3;
+ 
+  imprimirMem();
+  printf("Direccion asignada por getmem %x\n",add1=getmem(1024));
+  imprimirMem();
+  printf("Direccion asignada por getmem %x\n",add2=getmem(3011));
+  imprimirMem();
+  printf("Direccion asignada por getmem %x\n",add3=getmem(34800));
+  imprimirMem();
+  printf("Liberando memoria ...\n");
+  freemem(add1,512);
+  freemem(add2,512);
+  freemem(add3+5,300);
+  freemem(add3+2048,20);
+  imprimirMem();
+ 
+  xdone();
+  return 0;
+
+
+}
+

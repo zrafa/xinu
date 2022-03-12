@@ -1,0 +1,1142 @@
+
+Tema 2.
+Administracion de procesos
+
+2.1 Procesos
+Un programa consiste en código, datos y su pila.
+Un proceso es un programa en ejecución y administrado por el sistema operativo. Cada 
+programa tiene sus propios datos y pila, y el proceso tiene la información sobre el estado
+o contexto del programa que se ejecuta.
+
+Desde la perspectiva del sistema operativo Xinu, un proceso ejecuta un segmento de codigo,
+teniendo una pila y una prioridad determinada.
+
+La llamada al sistema operativo, que permite crear un proceso, se denomina create.
+Dicha llamada recibe los siguientes parametros
+	Direccion o apuntador del codigo a ejecutar
+	Tamaño en words de la pila
+	Prioridad del proceso, mayor que 0
+	Nombre del proceso
+	argumentos a la funcion
+	numero de argumentos
+El resultado de esta funcion es el PID del proceso creado
+
+Esta funcion crea un proceso, pero aun no lo pone listo para ejecucion
+La llamada resume permite aplicar esto, recibe como parametro el PID del proceso que
+debe poner listo para ejecucion
+
+El siguiente codigo muestra el uso de ambas llamadas
+
+
+#include 
+#include 
+
+codigo()
+{
+	printf("hola Xinu \n");
+}
+xmain()
+{
+	int pid=0;
+	pid=create(codigo,INITSTK,INITPRIO,"proc 1",0);
+	resume(pid);
+	xdone();
+	return 0;
+
+}
+
+2.2 Listas ligadas de procesos.
+
+
+El administrador de procesos se encarga manipular los procesos del sistema operativo. 
+A dichos procesos los forma en una lista.
+
+A cada proceso se le asigna un identificador de procesos (process id), que lo hace unico
+en todo el sistema operativo.
+
+Las listas que maneja el sistema operativo pueden ser colas FIFO, otras ordenadas por una
+llave, unas uniligadas o doblemente ligadas.
+
+Se puede crear un estructura de datos con una lista doblemente ligada (cada nodo
+apunta a su predecesor y sucesor), cada nodo contiene una lave y la lista tiene una cabeza
+y cola (head y tail).
+
+El campo de llave puede quedar determinado por un número entero, de tal manera que el
+nodo de la cabeza tiene la llave entera mas pequeña y la cola tiene la llave entera mas
+grande.
+
+El sucesor de la cola y el predecesor de la cabeza son nulos. Cuando la lista está vacia,
+el sucesor de la cabeza es la cola, y el predecesor de la cola es la cabeza.
+
+El siguiente código en C muestra la implantación en Xinu. (Ver archivo q.h)
+
+/* q.h - firstid, firstkey, isempty, lastkey, nonempty */
+
+/* q structure declarations, constants, and inline procedures           */
+
+#define NQENT           NPROC + NSEM + NSEM + 4 /* for ready & sleep    */
+
+struct qent {			/* one for each process plus two for    */
+				/* each list                            */
+	int   qkey;		/* key on which the queue is ordered    */
+	int   qnext;		/* pointer to next process or tail      */
+	int   qprev;		/* pointer to previous process or head  */
+};
+
+extern  struct  qent q[];
+extern  int     nextqueue;
+
+/* inline list manipulation procedures */
+
+#define isempty(list)   (q[(list)].qnext >= NPROC)
+#define nonempty(list)  (q[(list)].qnext < NPROC)
+#define firstkey(list)  (q[q[(list)].qnext].qkey)
+#define lastkey(tail)   (q[q[(tail)].qprev].qkey)
+#define firstid(list)   (q[(list)].qnext)
+
+#define EMPTY   -1              /* equivalent of null pointer           */
+
+La estructura qent representa un nodo de la lista doblemente ligada. El campo qkey
+tiene el dato, que basicamente es el identificador de proceso. El campo qnext es el
+apuntador al siguiente proceso y qprev al anterior.
+
+La lista tiene un tamaño NQENT, que es igual al numero máximo de procesos NPROC
+(definido como 30 en el archivo proc.h) y tambien permite manipular semaforos con un
+total de NSEM (45) y espacio para aquellos procesos que estan en estado de listos y
+dormidos.
+
+Las macros isempty, nonempty, firstkey y firstid permiten, dando la cabeza
+de la lista obtener información sobre la misma y lastkey permite tomar el ultimo elemento
+de la lista. 
+La cabeza de la lista tiene un campo qkey igual al minimo entero y la cola de la lista
+tiene un campo qkey igual al maximo entero.
+
+
+El siguiente programa, que es un proceso que se inserta en el propio Xinu, muestra el estado
+de la cola.
+
+#include 
+#include 
+
+extern int rdytail;
+extern int rdyhead;
+extern int numproc;
+extern int currpid;
+void imprimircola(void)
+{
+	int i;
+
+	/*imprimir la cola q*/ 
+	for (i=0;i
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  enqueue  --  insert an item at the tail of a list
+ *------------------------------------------------------------------------
+ */
+int enqueue(item, tail)
+int item;				/* item to enqueue on a list	*/
+int tail;				/* index in q of list tail	*/
+{
+	struct	qent	*tptr;		/* points to tail entry		*/
+	struct	qent	*mptr;		/* points to item entry		*/
+
+	tptr = &q[tail];
+	mptr = &q[item];
+	mptr->qnext = tail;
+	mptr->qprev = tptr->qprev;
+	q[tptr->qprev].qnext = item;
+	tptr->qprev = item;
+	return(item);
+}
+
+
+/*------------------------------------------------------------------------
+ *  dequeue  --  remove an item from a list and return it
+ *------------------------------------------------------------------------
+ */
+int dequeue(item)
+int item;
+{
+	struct	qent	*mptr;		/* pointer to q entry for item	*/
+
+	mptr = &q[item];
+	q[mptr->qprev].qnext = mptr->qnext;
+	q[mptr->qnext].qprev = mptr->qprev;
+	return(item);
+}
+
+La funcion enqueue, dado un numero de elemento de la lista, arregla los apuntadores para
+poner el elemento al final de la lista.
+La funcion dequeue elimina un elemento de la lista, simplemente moviendo los apuntadores
+del antecesor y sucesor.
+
+enqueue se utiliza para que un proceso que este en espera de un semaforo se quede en
+la lista de espera
+
+dequeue se utiliza cuando un proceso se suspende, se elimina de la cola de procesos
+
+El siguiente programa pone a un proceso al final de la cola de listos
+
+
+#include 
+#include 
+#include 
+
+extern int rdytail;
+
+
+void imprimircola(void)
+{
+	int i;
+
+	/*imprimir la cola q*/ 
+	for (i=0;i
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  insert  --  insert a process into a q list in key order
+ *------------------------------------------------------------------------
+ */
+int insert(proc, head, key)
+int proc;				/* process to insert		*/
+int head;				/* q index of head of list	*/
+int key;				/* key to use for this process	*/
+{
+	int	next;			/* runs through list		*/
+	int	prev;
+
+	next = q[head].qnext;
+	while (q[next].qkey < key)	/* tail has MAXINT as key	*/
+		next = q[next].qnext;
+	q[proc].qnext = next;
+	q[proc].qprev = prev = q[next].qprev;
+	q[proc].qkey  = key;
+	q[prev].qnext = proc;
+	q[next].qprev = proc;
+	return(OK);
+}
+
+getfirst - remueve y retorna el primero proceso en la cola de prioridad
+getlast - remueve y retorna el ultimo proceso de la lista
+
+(ver archivo getitem.c)
+
+/* getitem.c - getfirst, getlast */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  getfirst  --  remove and return the first process on a list
+ *------------------------------------------------------------------------
+ */
+int	getfirst(head)
+	int	head;			/* q index of head of list	*/
+{
+	int	proc;			/* first process on the list	*/
+
+	if ((proc=q[head].qnext) < NPROC)
+		return( dequeue(proc) );
+	else
+		return(EMPTY);
+}
+
+
+
+/*------------------------------------------------------------------------
+ *  getlast  --  remove and return the last process from a list
+ *------------------------------------------------------------------------
+ */
+int	getlast(tail)
+	int	tail;			/* q index of tail of list	*/
+{
+	int	proc;			/* last process on the list	*/
+
+	if ((proc=q[tail].qprev) < NPROC)
+		return( dequeue(proc) );
+	else
+		return(EMPTY);
+}
+
+El siguiente programa muestra el uso de la funcion insert, que equivale a poner en la cola de procesos listos 
+a los 3 procesos creados.
+
+#include 
+#include 
+#include 
+
+extern int rdytail;
+extern int rdyhead;
+
+
+void imprimircola(void)
+{
+	int i;
+
+	/*imprimir la cola q*/ 
+	for (i=0;i
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  newqueue  --  initialize a new list in the q structure
+ *------------------------------------------------------------------------
+ */
+int	newqueue()
+{
+	struct	qent	*hptr;		/* address of new list head	*/
+	struct	qent	*tptr;		/* address of new list tail	*/
+	int	hindex, tindex;		/* head and tail indexes	*/
+
+	hptr = &q[ hindex=nextqueue++ ];/* nextqueue is global variable	*/
+	tptr = &q[ tindex=nextqueue++ ];/*  giving next used q pos.	*/
+	hptr->qnext = tindex;
+	hptr->qprev = EMPTY;
+	hptr->qkey  = MININT;
+	tptr->qnext = EMPTY;
+	tptr->qprev = hindex;
+	tptr->qkey  = MAXINT;
+	return(hindex);
+}
+
+Se puede observar que el elemento nextqueue se supone inicializado (el sistema operativo lo pone a NPROC) y se
+insertan dos entradas para el head y tail. El sistema operativo pone los valores rdyhead  y rdytail en NPROC+1
+y NPROC+2
+
+
+2.6 Bloque de control de procesos
+
+El sistema operativo guarda la informacion de todos los procesos en una estructura de datos denominada la tabla de
+procesos, por cada proceso existe una entrada a dicha tabla. 
+En cada entrada de la tabla se guarda 
+	- el estado del proceso
+	- su prioridad
+	- semaforo y mensaje si esta usando
+	- la direccion del proceso del stack
+	- la longitud del stack
+	- el numero de argumentos que recibe el proceso
+	- el nombre del proceso
+	- la direccion inicial del codigo que se ejecuta
+
+En el siguiente archivo de encabezado (proc.h) se muestra la definicion del PCB
+
+/* proc.h - isbadpid */
+/* 8088 version */
+
+/* process table declarations and defined constants			*/
+
+#ifndef	NPROC				/* set the number of processes	*/
+#define	NPROC		30		/*  allowed if not already done	*/
+#endif
+
+/* process state constants */
+
+#define	PRCURR		'\01'		/* process is currently running	*/
+#define	PRFREE		'\02'		/* process slot is free		*/
+#define	PRREADY		'\03'		/* process is on ready queue	*/
+#define	PRRECV		'\04'		/* process waiting for message	*/
+#define	PRSLEEP		'\05'		/* process is sleeping		*/
+#define	PRSUSP		'\06'		/* process is suspended		*/
+#define	PRWAIT		'\07'		/* process is on semaphore queue*/
+
+/* miscellaneous process definitions */
+
+#define	PNMLEN		9		/* length of process "name"	*/
+#define	NULLPROC	0		/* id of the null process; it	*/
+					/*  is always eligible to run	*/
+
+#define	isbadpid(x)	(x<=0 || x>=NPROC)
+
+/* process table entry */
+
+struct	pentry	{
+	char	pstate;			/* process state: PRCURR, etc.	*/
+	int	pprio;			/* process priority		*/
+	int	psem;			/* semaphore if process waiting	*/
+	int	pmsg;			/* message sent to this process	*/
+	int	phasmsg;		/* nonzero iff pmsg is valid	*/
+	char	*pregs;			/* saved environment		*/
+	char	*pbase;			/* base of run time stack	*/
+	word	plen;			/* stack length	in bytes	*/
+	char	pname[PNMLEN+1];	/* process name			*/
+	int	pargs;			/* initial number of arguments	*/
+	int	(*paddr)();		/* initial code address		*/
+	
+	/* Additional user field for the OS labs			*/
+	/* Added by Eli Biham and Rivki Matosevitch 18/10/93		*/
+	int	user_int1;
+	int	user_int2;
+	int	user_int3;
+	int	user_int4;
+	int	user_int5;
+	int	user_int6;
+	int	user_int7;
+	long	user_long1;
+	long	user_long2;
+	long	user_long3;
+};
+
+extern	struct	pentry proctab[];
+extern	int	numproc;		/* currently active processes	*/
+extern	int	nextproc;		/* search point for free slot	*/
+extern	int	currpid;		/* currently executing process	*/
+
+
+El siguiente programa imprime la tabla de procesos
+
+#include 
+#include 
+
+xmain(){
+struct pentry *pcurr=0;
+int i;
+for (i=0;ipstate == PRCURR || pcurr->pstate == PRREADY)
+        printf("PID %d Estado %d Prioridad %d Contexto %x Base %x Longitud %d Nombre %s NArgs %d Codigo %x\n", i,
+	pcurr->pstate,pcurr->pprio,pcurr->pregs,pcurr->pbase,
+	pcurr->plen,pcurr->pname,pcurr->pargs,pcurr->paddr);
+}
+xdone();
+return 0;
+}
+
+2.7 Cambio de contexto
+
+Cuando un proceso es seleccionado por el planificador para no ejecutarse, debe de abandonar el CPU. Y el CPU
+debe otorgar la ejecución a un proceso que está en la cola de procesos listos (con estado READY).
+
+El cambio o conmutación de contexto consiste en el hecho de conservar el estado del proceso en ejecución y cargar
+el estado guardado del nuevo proceso.
+
+El contexto de un proceso incluye el valor de los registros de la CPU, el estado del proceso y la información
+sobre la administración de la memoria. Cuando ocurre una conmutación de contexto, el kernel del sistema operativo
+guarda el contexto del proceso anterior en su PCB y carga el del nuevo proceso programado para ejecución.
+El tiempo que tarda el sistema operativo en aplicar la conmutación es trabajo adicional del kernel y mientras
+el sistema no realiza trabajo util mientras se efectua el cambio de contexto. Su velocidad varia de máquina a
+máquina, dependiendo de la velocidad de memoria, el numero de registros del CPU que deben de copiarse. La
+velocidad hoy en dia va de 1 a 1000 microsegundos.
+
+Algunos procesadores tienen hardware especial para soportar el cambio de contexto.
+
+En el caso de Xinu, el cambio de contexto consiste en guardar el estado del proceso y aplicar un cambio de
+pilas. Dicha rutina se escribio en lenguaje ensamblador y es dependiente de la computadora a donde se porte.
+
+Su logica es la siguiente:
+
+1. Recibe dos parametros, el apuntador a la pila (SP) del proceso en el CPU y el apuntador a la pila (SP) del
+proceso a ser ubicado en el CPU (esto es, el campo pregs de la entrada del PCB)
+2. Se guarda como siempre el registro bp en la pila (push bp)
+3. Se asigna el registro sp al registro bp, para empezar a tomar parametros
+4. Guarda el registro FLAGS del CPU en la pila (pushf)
+5. Desactiva las interrupciones para evitar que algun otra rutina tome control del CPU (cli)
+6. Guarda los registros SI,DI en la pila, debido a que las rutinas en lenguaje C asume que dichos registros
+no cambian a lo largo de las llamadas a los procedimientos. (push si, push di)
+
+	El estado de la pila hasta el paso 6 es
+				
+BP Anterior| FLAGS| SI | DI |        |     |Stack Anterior|Nuevo Stack| 
+
+                            ^        ^	   ^	          ^ 
+			    |	     |     |	          |
+			   SP 	     BP	  BP+4		BP+6    
+
+adonde apunta SP se puede denominar como el estado del proceso guardado.
+
+7. Se guarda en el registro BX la direccion del pila anterior (mov bx,[bp+4])
+8. Se guarda en el apuntador de la pila de la rutina (SP) en la celda dada por bx (mov [bx],sp). Esto permite
+que el PROCESO ANTERIOR registre en que parte de la rutina que estaba ejecutando se habia quedado, dejando
+almacendado en la entrada del PCB la direccion actual de la pila
+9. Se guarda en el registro BX la direccion del stack nuevo (mov bx,[bp+6])
+10. Se asigna al apuntador de la pila actual (SP) la direccion de la pila nueva (mov sp,[bx]). Esto permite
+que de manera inmediata la computadora quede referenciando a otra pila
+11. Se desapilan los registros DI, SI, FLAGS y BP (pop di, pop si, popf, pop bp)
+12. Se retorna de la rutina ensamblador. Dado que es otra pila distinta, la direccion de retorno sera diferente
+a la de la llamada original.
+
+
+El truco consiste entonces en que en el PCB se almacene la dirección de la pila como quedo en el cambio de
+contexto. Cuando el proceso que se quito del CPU necesita ponerse en el mismo otra vez, basta con indicar 
+la dirección del apuntador de la pila para recuperar su estado original y volver al punto donde se habia quedado
+en ejecución el proceso.
+
+
+El codigo del cambio de contexto se puede encontar en el archivo ctxsw.asm
+
+; ctxsw.asm - _ctxsw
+
+ 	include	dos.asm
+
+	dseg
+; null data segment
+	endds
+
+	pseg
+
+	public	_ctxsw
+
+;-------------------------------------------------------------------------
+; _ctxsw  --  context switch
+;-------------------------------------------------------------------------
+; void ctxsw(opp,npp)
+; char *opp, *npp;
+;---------------------------------------------------------------------
+; Stack contents upon entry to ctxsw:
+;	SP+4 => address of new context stack save area
+;       SP+2 => address of old context stack save area
+;       SP   => return address
+; The addresses of the old and new context stack save areas are
+; relative to the DS segment register, which must be set properly 
+; to access the save/restore locations.
+;
+; The saved state consists of the current BP, SI and DI registers,
+; and the FLAGS register
+;---------------------------------------------------------------------
+_ctxsw	proc	near
+	push	bp
+	mov	bp,sp		; frame pointer
+	pushf			; flags save interrupt condition
+	cli			; disable interrupts just to be sure
+	push	si
+	push	di		; preserve registers
+	mov	bx,[bp+4]	; old stack save address
+	mov	[bx],sp
+	mov	bx,[bp+6]	; new stack save address
+	mov	sp,[bx]
+	pop	di
+	pop	si
+	popf			; restore interrupt state
+	pop	bp
+	ret
+_ctxsw	endp
+
+	endps
+
+	end
+
+
+El siguiente programa en C muestra el uso del cambio de contexto
+
+#include 
+#include 
+#include 
+
+extern int currpid;
+
+struct pentry *pactual;
+struct pentry *pnuevo;
+codigo1()
+{
+	printf("cambio a nuevo contexto\n");
+        /*cambiar al contexto viejo*/
+	ctxsw(&pnuevo->pregs,&pactual->pregs);
+	printf("Este mensaje nunca se despliega");
+	return 0;
+}
+xmain()
+{
+	int pid,i;
+	pid=create(codigo1,INITSTK,15,"proc 1",0);
+	pactual = &proctab[currpid];
+	pnuevo = &proctab[pid]; 
+	/*cambiar contexto*/
+	printf("viejo contexto %x nuevo contexto %x\n",pactual->pregs,pnuevo->pregs);
+	ctxsw(&pactual->pregs,&pnuevo->pregs);
+	printf("Recuperando contexto inicial \n");
+	printf("viejo contexto %x nuevo contexto %x\n",pactual->pregs,pnuevo->pregs);
+	/*un cambio de contexto a si mismo debe dejarlo en un estado sin  cambio*/
+	ctxsw(&pactual->pregs,&pactual->pregs);
+	printf("Fin de proceso");
+	xdone();
+	return 0;
+}
+
+
+2.8 Planificación de procesos.
+
+En todo sistema operativo tipicamente existe un solo proceso en estado de ejecucion y los demas en estado de
+listo. Los procesos son clasificados al estado de listos (READY) cuando son elegibles para los servicios del CPU
+pero no están actualmente ejecutandose. 
+
+Para aplicar el cambio de contexto de un proceso, previamente se debe seleccionar un proceso de aquellos que
+están en estado de listo y darle el control del CPU.
+
+El software que implanta la politica usada para seleccionar un proceso entre aquellos que estan listos se 
+denomina planificador (scheduler).
+
+La politica que sigue el planificador de Xinu es:
+En cualquier tiempo, el proceso que se puede elegir para servicio del CPU es el de más alta prioridad. Entre
+aquellos procesos de igual prioridad, la planificación es de tipo round-robin.
+
+
+La planificación round-robin significa que los procesos que son seleccionados uno despues del otro son aquellos
+miembros que fueron llegando de una manera ordenada e insertados según el orden de llegada. 
+
+En la cola de prioridad de Xinu, con la rutina insert asegura este orden. 
+
+Además una planificación round robin no solo se limita a la política a del primero en llegar es el primero en 
+ser servido (First Come, First Served,FCFS); también se introduce el concepto de apropiación para poder lograr 
+la conmutación de procesos.
+
+La apropiación se da cuando se define una unidad de tiempo, denominada quantum o porción de tiempo, y que
+es una medida de cuanto tiempo de procesamiento tiene asignado un CPU antes de que sea elegido para ser quitado
+del CPU. El quantum tipicamente puede ser de 10 a 100 milisegundos.
+
+La planifiación Round-Robin mantiene la cola de listo como una cola de prioridad. Los procesos nuevos, que
+tipicamente tienen la prioridad más alta, se agregan al final de la lista. El planificador de la CPU toma
+el primero proceso de la cola de listo, fija el valor de un temporizador para interrumpir después de que 
+transcurra 1 Quantum y despacha el proceso.
+
+Si el proceso ocupa menos de 1 quantum en tiempo de CPU, entrega de manera voluntaria al mismo y por tanto
+el planificador pasará al siguiente proceso en la cola de listos. En caso de que ocupe mas de 1 quantum, el
+temporizador se apagará y provocará una interrupción que se comunica al sistema operativo. Se ejecuta una 
+conmutación de contexto y el proceso será puesto en la cola de prioridades, según la prioridad que tenga.
+El planificador pondra en el CPU el siguiente proceso en la cola de listos.
+
+En el caso de Xinu, siempre tiene la referencia al proceso ejecutandos, por medio de la variable global currpid.
+Cuando el planificador tiene que aplicar un cambio de contexto, utiliza currpid para indexar la tabla de procesos
+y aplicar el criterio de planificación round-robin. 
+
+El planificador solo bajo una condición no puede ser aplicado y es cuando el kernel esta realizando actividades
+criticas del sistema y en esta idea Xinu debe tener control total del CPU. Xinu utiliza una variable globlal
+denominada pcxflag la cual es 0 cuando no se habilita la planificación (se define en el archivo intmap.asm y
+las rutinas que la manejan estan en el archivo xeidi.asm)
+
+El codigo del planificador es aplicado por la rutina resched (archivo resched.c)
+
+
+/* resched.c - resched */
+
+#include 
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  resched  --  reschedule processor to highest priority ready process
+ *
+ * Notes:	Upon entry, currpid gives current process id.
+ *		Proctab[currpid].pstate gives correct NEXT state for
+ *			current process if other than PRCURR.
+ *------------------------------------------------------------------------
+ */
+int	resched()
+{
+	register struct	pentry	*optr;	/* pointer to old process entry */
+	register struct	pentry	*nptr;	/* pointer to new process entry */
+
+	optr = &proctab[currpid];
+	if ( optr->pstate == PRCURR ) {
+		/* no switch needed if current prio. higher than next	*/
+		/* or if rescheduling is disabled ( pcxflag == 0 )	*/
+		if ( sys_pcxget() == 0 || lastkey(rdytail) < optr->pprio )
+			return;
+		/* force context switch */
+		optr->pstate = PRREADY;
+		insert(currpid,rdyhead,optr->pprio);
+	} else if ( sys_pcxget() == 0 ) {
+		kprintf("pid=%d state=%d name=%s",
+			currpid,optr->pstate,optr->pname);
+		panic("Reschedule impossible in this state");
+	}
+
+	/* remove highest priority process at end of ready list */
+
+	nptr = &proctab[ (currpid = getlast(rdytail)) ];
+	nptr->pstate = PRCURR;		/* mark it currently running	*/
+	preempt = QUANTUM;		/* reset preemption counter	*/
+	ctxsw(&optr->pregs,&nptr->pregs);
+
+	/* The OLD process returns here when resumed. */
+	return;
+}
+
+
+El planificador manipula una variable global, denominada preempt, que contiene el numero de unidades del
+Quantum
+
+El siguiente código muestra el uso de la función resched(), dando 3 procesos con distintas prioridades
+
+
+#include 
+#include 
+#include 
+
+extern int rdytail;
+extern int rdyhead;
+
+
+void imprimircola(void)
+{
+	int i;
+
+	/*imprimir la cola q*/ 
+	for (i=0;i
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  ready  --  make a process eligible for CPU service
+ *------------------------------------------------------------------------
+ */
+int	ready (pid)
+	int	pid;			/* id of process to make ready	*/
+{
+	register struct	pentry	*pptr;
+
+	if (isbadpid(pid))
+		return(SYSERR);
+	pptr = &proctab[pid];
+	pptr->pstate = PRREADY;
+	insert(pid,rdyhead,pptr->pprio);
+	return(OK);
+}
+
+
+Al siguiente codigo crea un proceso, lo pone en estado de ready via la funcion ready() e imprime
+la cola de procesos.
+
+#include 
+#include 
+#include 
+
+extern int rdytail;
+extern int rdyhead;
+
+
+void imprimircola(void)
+{
+	int i;
+
+	/*imprimir la cola q*/ 
+	for (i=0;i
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  resume  --  unsuspend a process, making it ready; return the priority
+ *------------------------------------------------------------------------
+ */
+
+SYSCALL resume(pid)
+int pid;
+{
+	int	ps;			/* saved processor status	*/
+	struct	pentry	*pptr;		/* pointer to proc. tab. entry	*/
+	int	prio;			/* priority to return		*/
+
+	disable(ps);
+	if (isbadpid(pid) || (pptr = &proctab[pid])->pstate != PRSUSP) {
+		restore(ps);
+		return(SYSERR);
+	}
+	prio = pptr->pprio;
+	ready(pid);
+	resched();
+	restore(ps);
+	return(prio);
+}
+
+El primer ejemplo de este capitulo muestra el uso de resume()
+
+
+2.12 Suspensión de un proceso.
+Un proceso se puede suspender si está en estado de READY o CURRENT (en ese caso el mismo ordeno su suspension).
+Cuando está en estado de READY, se debe eliminar de la cola de procesos listos (usando la función dequeue).
+Cuando está en estado de ejecución, CURRENT, se debe invocar al planificador.
+En ambos casos, el proceso debe tener un estado distinto, suspendido, por lo que el campo pstate del PCB tiene
+el valor constante PRSUSP.
+Al aplicar la suspensión de un proceso, también se debe aplicar la activación y desactiviación de interrupciones.
+
+La función que aplica la suspension se denomina suspend, que recibe un pid (archivo suspend.c)
+/* suspend.c - suspend */
+/* 8086 version */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  suspend  --  suspend a process, placing it in hibernation
+ *------------------------------------------------------------------------
+ */
+SYSCALL	suspend(pid)
+	int	pid;			/* id of process to suspend	*/
+{
+	struct	pentry	*pptr;		/* pointer to proc. tab. entry	*/
+	int	ps;			/* saved processor status	*/
+	int	prio;			/* priority returned		*/
+
+	disable(ps);
+	if (isbadpid(pid) || pid==NULLPROC ||
+	 ((pptr= &proctab[pid])->pstate!=PRCURR && pptr->pstate!=PRREADY)) {
+		restore(ps);
+		return(SYSERR);
+	}
+	if (pptr->pstate == PRREADY) {
+		dequeue(pid);
+		pptr->pstate = PRSUSP;
+	} else {
+		pptr->pstate = PRSUSP;
+		resched();
+	}
+	prio = pptr->pprio;
+	restore(ps);
+	return(prio);
+}
+
+
+El siguiente código muestra como se usa la función suspend de Xinu
+
+#include 
+#include 
+#include 
+
+extern int rdytail;
+extern int rdyhead;
+extern int currpid;
+
+
+void imprimircola(void)
+{
+	int i;
+
+	/*imprimir la cola q*/ 
+	for (i=0;i
+#include 
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  kill  --  kill a process and remove it from the system
+ *------------------------------------------------------------------------
+ */
+SYSCALL kill(pid)
+	int	pid;			/* process to kill		*/
+{
+	struct	pentry	*pptr;		/* points to proc. table for pid*/
+	int	ps;			/* saved processor status	*/
+
+	disable(ps);
+	if (isbadpid(pid) || (pptr = &proctab[pid])->pstate==PRFREE) {
+		restore(ps);
+		return(SYSERR);
+	}
+	if (--numproc == 0)
+		xdone();
+	freestk(pptr->pbase, pptr->plen);
+	switch (pptr->pstate) {
+
+	case PRCURR:	pptr->pstate = PRFREE;	/* suicide */
+			resched();
+
+	case PRWAIT:	semaph[pptr->psem].semcnt++;
+						/* fall through */
+	case PRSLEEP:
+	case PRREADY:	dequeue(pid);
+						/* fall through */
+	default:	pptr->pstate = PRFREE;
+	}
+	restore(ps);
+	return(OK);
+}
+
+2.14 Creación de un proceso.
+
+Cuando un proceso se crea, se debe indicar el código a ejecutar, el tamaño sugerido de la pila, su prioridad
+inicial, nombre y argumentos.
+
+La creación de un proceso es basicamente llenar la entrada del PCB asignado, con una busqueda previa de una
+entrada libre y pedir a las rutinas de manejo de memoria espacio para la pila. Un proceso recien creado 
+tiene el estado de suspendido. Llena la dirección del apuntador de la pila e indica que al concluir un proceso
+debe ejecutar una rutina que lo finalice y que llama a la rutina kill().
+
+La creación también se hace bajo el contexto de desactivar y activar interrupciones.
+
+El código se encuentra en el archivo create.c, que contiene la funcione create y una función denominada
+newpid, que retorna el PID de la entrada del PCB que este libre
+
+/* create.c - create, newpid */
+
+#include 
+#include 
+#include 
+#include 
+
+#define	INITF	0x0200	/* initial flag register - set interrupt flag,	*/
+			/* clear direction and trap flags		*/
+
+extern	int	INITRET();	/* location to return upon termination	*/
+
+/*------------------------------------------------------------------------
+ *  create  --  create a process to start running a procedure
+ *------------------------------------------------------------------------
+ */
+SYSCALL create(procaddr,ssize,priority,namep,nargs,args)
+int (*procaddr)();		/* procedure address			*/
+word ssize;			/* stack size in words			*/
+short priority;			/* process priority > 0			*/
+char *namep;			/* name (for debugging)			*/
+int nargs;			/* number of args that follow		*/
+int args;			/* arguments (treated like an array)	*/
+{
+	int	pid;			/* stores new process id	*/
+	struct	pentry	*pptr;		/* pointer to proc. table entry */
+	int	i;			/* loop variable		*/
+	int	*a;			/* points to list of args	*/
+	char	*saddr;			/* start of stack address	*/
+	int	*sp;			/* stack pointer		*/
+	int	ps;			/* saved processor status	*/
+
+	disable(ps);
+	ssize = roundew(ssize);
+	if ( ssize < MINSTK || priority < 1 ||
+		(pid=newpid()) == SYSERR ||
+		((saddr=getstk(ssize)) == NULL ) ) {
+		restore(ps);
+		return(SYSERR);
+	}
+	numproc++;
+	pptr = &proctab[pid];
+	pptr->pstate = PRSUSP;
+	for (i=0 ; ipname[i] = (*namep ? *namep++ : ' ');
+	pptr->pname[PNMLEN]='\0';
+	pptr->pprio = priority;
+	pptr->phasmsg = 0;		/* no message			*/
+	pptr->pbase = saddr;
+	pptr->plen = ssize;
+	sp = (int *) (saddr+ssize);	/* simulate stack pointer	*/
+	sp -= 4;			/* a little elbow room		*/
+	pptr->pargs = nargs;
+	a = (&args) + nargs;		/* point past last argument	*/
+	for ( ; nargs > 0 ; nargs--)	/* machine dependent; copy args	*/
+		*(--sp) = *(--a);	/*  onto created process' stack	*/
+	*(--sp) = (int)INITRET;		/* push on return address	*/
+	*(--sp) = (int)procaddr;	/* simulate a context switch	*/
+	--sp ;				/* 1 word for bp		*/
+	*(--sp) = INITF;		/* FLAGS value			*/
+	sp -= 2;			/* 2 words for si and di	*/
+	pptr->pregs = (char *)sp;	/* save for context switch	*/
+	pptr->paddr = procaddr;
+	restore(ps);
+	return(pid);
+}
+
+/*------------------------------------------------------------------------
+ *  newpid  --  obtain a new (free) process id
+ *------------------------------------------------------------------------
+ */
+LOCAL	newpid()
+{
+	int	pid;			/* process id to return		*/
+	int	i;
+
+	for (i=0 ; i
+#include 
+
+/*------------------------------------------------------------------------
+ *  userret  --  entered when a process exits by return
+ *------------------------------------------------------------------------
+ */
+userret()
+{
+	int	pid;
+
+	kill( pid=getpid() );
+	kprintf("Fatal system error - unable to kill process %d",pid);
+}
+
+
+
+2.15 Habilitar y deshabilitar interrupciones
+
+Las rutinas para habilitar y deshabilitar interrupciones se escriben en ensambaldor. Aunque en el código
+se manejan como disable() y restore(), son realmente macros definidas en el archivo de encabezado del kernel
+(kernel.h) que se presenta a continuación.
+
+/* kernel.h - isodd, disable, restore, enable, pause, halt, xdisable, xrestore */
+/* 8086/8 PC-Xinu version - for IBM PC/XT/AT and Clones */
+
+/* Symbolic constants used throughout Xinu */
+
+typedef	char		Bool;		/* Boolean type			*/
+typedef unsigned int	word;		/* word type			*/
+
+#define	FALSE		0		/* Boolean constants		*/
+#define	TRUE		1
+#define	NULL		(char *)0	/* Null pointer for linked lists*/
+#define	SYSCALL		int		/* System call declaration	*/
+#define	LOCAL		static		/* Local procedure declaration	*/
+#define	INTPROC		int		/* Interrupt procedure  	*/
+#define	PROCESS		int		/* Process declaration		*/
+#define WORD		word		/* 16-bit word			*/ 
+#define	MININT		0100000		/* minimum integer (-32768)	*/
+#define	MAXINT		0077777		/* maximum integer (+32767)	*/
+#define	MINSTK		256		/* minimum process stack size	*/
+#define	NULLSTK		256		/* process 0 stack size		*/
+#define	OK		 1 		/* returned when system	call ok	*/
+#define	SYSERR		-1		/* returned when sys. call fails*/
+
+/* initialization constants */
+
+#define	INITARGC	2		/* initial process argc		*/
+#define	INITSTK		512		/* initial process stack	*/
+#define	INITPRIO	20		/* initial process priority	*/
+#define	INITNAME	"xmain"		/* initial process name		*/
+#define	INITRET		userret		/* processes return address	*/
+#define	INITREG		0		/* initial register contents	*/
+#define	QUANTUM		1		/* clock ticks until preemption	*/
+
+/* misc. utility functions */
+
+#define	isodd(x)	(01&(int)(x))
+#define	disable(x)	(x)=sys_disabl() /* save interrupt status	*/
+#define	restore(x)	sys_restor(x)	/* restore interrupt status	*/
+#define	enable()	sys_enabl()	/* enable interrupts		*/
+#define	pause()		sys_wait()	/* machine "wait for interr."	*/
+#define	halt()		sys_hlt()	/* halt PC-Xinu			*/
+#define xdisable(x)	(x)=sys_xdisabl() /* save int & dosflag status	*/
+#define xrestore(x)	sys_xrestor(x)	/* restore int & dosflag status	*/
+
+/* system-specific functions and variables */
+
+extern	int	sys_disabl();		/* return flags & disable ints	*/
+extern	void	sys_restor();		/* restore the flag register	*/
+extern	void	sys_enabl();		/* enable interrupts		*/
+extern	void	sys_wait();		/* wait for an interrupt	*/
+extern	void	sys_hlt();		/* halt the processor		*/
+extern	int	sys_xdisabl();		/* Return interrupts to MS-DOS	*/
+extern	void	sys_restor();		/* Interrupts back to Xinu	*/
+
+/* process management variables */
+
+extern	int	rdyhead, rdytail;
+extern	int	preempt;
+
+El codigo ensamblador que aplica la deshabilitacion de las interrupciones de denomina sys_disabl y el
+codigo que restaura las interrupciones se denomina sys_restor. Está definido en el archivo eidi.asm y contiene
+otras rutinas que posteriormente se estudiaran
+
+; eidi.asm - _sys_disabl, _sys_enabl, _sys_restor, _sys_wait, _sys_hlt
+
+	include	dos.asm		; segment macros
+
+	dseg
+; null data segment
+	endds
+
+	pseg
+
+	public	_sys_disabl,_sys_restor,_sys_enabl,_sys_wait,_sys_hlt
+
+;-------------------------------------------------------------------------
+; _sys_disabl  --  return interrupt status and disable interrupts
+;-------------------------------------------------------------------------
+; int sys_disabl()
+_sys_disabl	proc	near
+	pushf			; put flag word on the stack
+	cli			; disable interrupts!
+	pop	ax		; deposit flag word in return register
+	ret
+_sys_disabl	endp
+
+;-------------------------------------------------------------------------
+; _sys_restor  --  restore interrupt status
+;-------------------------------------------------------------------------
+; void sys_restor(ps)
+; int ps;
+_sys_restor	proc	near
+	push	bp
+	mov	bp,sp		; C calling convenion
+	push	[bp+4]
+	popf			; restore flag word
+	pop	bp
+	ret
+_sys_restor	endp
+
+;-------------------------------------------------------------------------
+; _sys_enabl  --  enable interrupts unconditionally
+;-------------------------------------------------------------------------
+; void sys_enabl()
+_sys_enabl	proc	near
+	sti			; enable interrupts
+	ret
+_sys_enabl	endp
+
+;-------------------------------------------------------------------------
+; _sys_wait  --  wait for interrupt
+;-------------------------------------------------------------------------
+; void sys_wait()
+_sys_wait	proc	near
+	pushf
+	sti			; interrupts must be enabled here
+	hlt
+	popf
+	ret
+_sys_wait	endp
+
+;-------------------------------------------------------------------------
+; _sys_hlt  --  halt the current program and return to host
+;-------------------------------------------------------------------------
+; void sys_hlt()
+_sys_hlt	proc	near
+	mov	ah,4ch		; terminate function
+	xor	al,al		; OK return code
+	int	21h		; MS-DOS function call
+	ret
+_sys_hlt	endp
+
+	endps
+
+	end
+
+La rutina sys_disabl, guarda en la pila de la rutina actual el registro FLAGS e invoca a la instrucción cli,
+que permite deshabilitar interrupciones. Pone en el registro AX el valor de las banderas, la cual se retorna
+a la rutina que le invoca.
+La rutina sys_restor restuara via la funcion popf el registro FLAG
+
+
+2.16 Temporizador.
+
+Cuando se hablo del planificador se mencionó el concepto de un temporizador. Un temporizador es una rutina que
+se dispara al momento que recibe una interrupción del reloj de la computadora. Cuando se estudie el manejo del
+reloj se verá a mas detalle, pero es interesante mostrar la rutina que es activada por el temporizador.
+
+/* clkint.c - clkint */
+
+#include 
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  clkint  --  clock service routine
+ *  called at every clock tick and when starting the deferred clock
+ *------------------------------------------------------------------------
+ */
+INTPROC clkint(mdevno)
+int mdevno;				/* minor device number		*/
+{
+	int	i;
+
+	tod++;
+	if (defclk) {
+		clkdiff++;
+		return;
+	}
+	if (slnempty)
+		if ( (--*sltop) <= 0 )
+			wakeup();
+	if ( (--preempt) <= 0 )
+		resched();
+}
+
+Como se puede ver, la variable global preempt es disminuida en una unidad y si llega a un valor menor o igual
+que 0, se pide la planificación de procesos. De esta manera, es posible lograr que exista un proceso ejecutandose
+y que se interrumpa despues de un tiempo definido.
+
+

@@ -1,0 +1,1145 @@
+
+Tema III. Administración de la entrada salida (E/S)
+
+Una computadora tipicamente realiza dos tareas principales, procesar programas y operaciones de E/S.
+
+El sistema operativo se encarga de administrar y controlar las operaciones y dispositivos de E/S.
+
+1. Conceptos básicos de Hardware E/S.
+
+Aunque existe una variedad de arquitecturas de E/S, con distintas funciones, todos los sistemas E/S coinciden 
+que existe un dispositivo físico o hardware.
+
+La manera como se comunica el dispositivo es por medio de una conexión alámbrica o inalámbrica. 
+
+Dicha conexión va hacia un punto de conexión de la computadora denominado puerto. (una impresora,
+un modem, se conectan a un puerto paralelo o serial respectivamente)
+
+Cuando dos o más dispositivos se conectan a la computadora usando un mecanismo de comunicación compartido, el 
+esquema de comunicación es de bus. En dicho bus circulan señales eléctricas y cada dispositivo conectado al 
+bus sabe interpretar dichas señales.
+
+Un controlador es un componente electrónico que opera a un puerto, bus o dispositivo. Dicho controlador puede ser
+sencillo o puede tener una complejidad para manipular buses con protocolos de comunicación elaborados.
+
+El controlador tiene registros para almacenar datos y controlar las señales. Los registros son de estado para
+saber si una instrucción se completo o si existen datos o si hay un error; el registro de control permite iniciar
+un comando o cambiar el modo de operación del dispositivo; los registros de entrada para tomar los datos que
+se leen del dispositivo y los registros de salida para depositar datos que se escriben al dispositivo.
+
+Existen dos esquemas para interactuar con los dispositivos.
+
+Instrucciones de E/S. Cuando la CPU quiere comunicarse con el controlador, genera una secuencia de bits que 
+escribe a dichos registros. Las instrucciones de E/S de una
+computadora permiten generar bits para ser escritos al controlador. 
+
+Mapeo en memoria de E/S. Otra manera para que la CPU se comunique con un controlador, 
+es por medio de una técnica de mapeo de memoria, donde la CPU puede utilizar instrucciones de
+lectura y escritura de memoria hacia direcciones especiales de E/S, con el fin de escribir información al 
+controlador.
+
+2. Técnicas de comunicación de Hardware E/S.
+
+Para las operaciones de E/S existen 3 técnicas de comunicación
+
+* E/S Programada o Escrutinio (Polling). 
+Cuando el procesador está ejecutando un programa y encuentra una instrucción de E/S, ejecuta dicha instrucción,
+enviando una instrucción al módulo apropiado de E/S. Con E/S programada, el controlador de E/S lleva a cabo
+la acción requerida y activa los bits apropiados en el registro de estado de E/S . Cuando el controlador E/S
+concluye su trabajo, no avisa al procesador dicho hecho. 
+Por tanto, el procesador debe comprobar periodicamente el estado del módulo de E/S hasta saber que se ha completado
+la operación.
+
+La técnica de escrutinio tiene la desventaja de mantener ocupado al procesador de manera innecesaria, se podria
+aprovechar el tiempo en el que E/S aplica la operación, para que la CPU realice otras actividades.
+
+* E/S dirigida por interrupciones.
+
+El hardware de la CPU tiene un linea de solicitud de interrupción que el CPU revisa al final de cada ciclo de
+instrucción. Si el controlador ha colocado una señal en dicha linea, el CPU interrumpe al programa que estaba
+ejecutando y salta a una rutina de manejo de interrupciones. Dicha rutina, manejadora de interrupciones, despacha
+la interrupción y ejecuta el algoritmo necesario para manipular la E/S. Cuando concluye, la CPU continua ejecutando
+el programa que se había interrumpido.
+
+La manera de procesar con las interrupciones es asíncrona.
+
+Existen dos tipos de interrupciones. La interrupción no mascarable (errores de hardware no recuperables) siempre
+son recibidas. La interrupción mascarable puede ser apagada por la CPU antes de la ejecución de instrucciones
+críticas que no deben ser interrumpidas.
+
+El mecanismo de interrupción acepta una dirección, que permite indexar una tabla denominada vector de 
+interrupciones, dicha tabla contiene las direcciones de memoria de los manejadores de interrupción.
+
+Una interrupción se puede dar por 3 condiciones
++ Excepciones o errores de hardware
++ E/S
++ Trampas o interrupciones de software
+
+* Acceso directo a memoria.
+En el caso de E/S con interrupciones, cuando el manejador de la interrupción la despacha, tiene instrucciones
+para transferir la información del dispositivo a memoria. La CPU consume tiempo de procesamiento en dicha 
+transferencia. Si el hardware tiene un circuito dedicado a copiar de dispositivo a memoria y viceversa para poder
+liberar a la CPU de dicha actividad, se puede agilizar el funcionamiento de E/S. El esquema de acceso directo
+a memoria se basa en que el hardware tiene un controlador DMA (Direct Memory Access) que realiza esta función.
+
+Entonces, la CPU cuando recibe una interrupción por parte del controlador, pide al controlador DMA que transfiera
+los datos a un buffer de memoria, en el lapso de dicha transferencia la CPU puede trabajar en otro programa y 
+cuando el controlador DMA concluye, genera una interrupción a la CPU para indicar la conclusión de la transferencia.
+
+3. Manejo del sistema operativo a la E/S.
+
+Al diseñar un Sistema operativo, se debe tomar en cuenta la variedad de tipos de dispositivos. Con el fin de que
+el diseño sea flexible, el sistema operativo se estructura de una manera estándar y uniforme.
+
+Las técnicas que utiliza son abstracción, encapsulado y desarrollo de capas de software.
+
+Con la abstracción se eliminan las diferencias especificas en los dispositivos de E/S identificando un conjunto
+de clases generales, las cuales se acceden mediante un conjunto de funciones estandarizadas o una interfaz.
+
+Las diferencias entre cada dispositivo se encapsula en módulos del kernel denominados manejadores de dispositivo
+(device driver) que se diseñan a la medida de cada dispositivo y que se acoplan a las definiciones de la interfaz.
+
+Todos los manejadores de dispositivo forman una capa de software y es la que se expone como parte de los servicios
+del kernel.
+
+
+Los dispositivos se pueden clasificar por distintos criterios
+
+* Modo de transferencia de datos.
+	+ De caracter transfiere bytes uno por uno (terminal de despliegue)
+	+ De bloques transfiere un bloque de bytes como una unidad (disco duro)
+
+* Método de acceso
+	+ Secuencial,para llegar a un bloque de información, debe recorrer todo el dispositivo (modem)
+	+ Aleatorio, se posiciona en cualquier bloque sin tener que recorrer todo el dispositivo (cdrom)
+ 
+* Plan de transferencia.
+	+ Síncrona. Realiza transferencia de datos con tiempos de respuesta predecibles (unidad de cinta)
+	+ Asíncrona. No tiene un tiempo regular o predecible para responder. (ratón)
+
+* Comportamiento
+	+ Compartido. Se pueden aplicar operaciones de manera concurrente por varios procesos (disco duro)	
+	+ Dedicado. Un solo proceso lo puede usar (unidad de cinta)
+
+* Tipo de operación
+	+ Sólo lectura (DVD)
+	+ Sólo escritura (controlador gráfico)
+	+ Lectura-escritura (CDRW)
+
+
+Sobre un dispositivo de bloques se pueden realizar operaciones de lectura y escrituras, búsquedas. Se puede
+accesar directamente o E/S en bruto (RAW I/O) o con un esquema estructurado con un sistema de archivos. También
+se puede asociar memoria virtual con bloques de E/S, de tal manera que se accesa a memoria y no directamente
+al dispositivo, esto se conoce como mapeo en memoria (memory mapped I/O).
+
+Un dispositivo de caracteres tiene operaciones para leer o escribir un solo byte, y sobre dichos dispositivos
+se construyen bibliotecas de programas que manipulan buffers para ir almacenando los bytes que se leen o 
+escriben.
+
+El reloj y los cronómetros del sistema operativo son dispositivos para poder controlar activación de tareas por
+tiempo. El sistema operativo cacha las interrupciones de los cronómetros y las usa para el planificador de
+procesos y aquellos procesos que se suspenden por tiempo.
+
+El manejo de E/S se puede hacer con bloque y sin bloqueo. Cuando es con bloqueo, el kernel suspende al proceso
+que invoco la operacion de E/S hasta que se completa. Sin bloqueo implica que la E/S lee o escribe los datos 
+conforme los tenga y permite agilizar el procesamiento para evitar que el proceso se quede bloqueado, el
+cual puede procesar de manera asíncrona.
+
+
+4. Estructuras y algoritmos del kernel.
+
+Un kernel proporciona diversos servicios relacionados con E/S.
+
+* Planificación de E/S. El kernel decide en que orden aplicar las operaciones a un dispositivo, que permitan
+manipular la E/S de manera eficiente. Se usan colas de peticiones para cada dispositivo.
+
+* Asignación de buffers. Un buffer es un área de memoria que almacena datos mientras éstos se transfieren entre
+dos dispositivos o entre un dispositivo y memoria. Con los buffers se permite aplicar una correspondencia entre
+el productor y el consumidor con el fin de que si difieren en velocidad, pueden producir y consumir a distintas
+tasas sin perder información. Los buffers también permiten soportar distintos tamaños de transferencia, con
+el fin de ir armando un bloque de pequeños paquetes para formar un paquete que entiende un consumidor con mayor
+tamaño de transferencia. También un buffer es una zona temporal de datos, que al momento de escribir o leer datos
+mandados por una aplicación los guarda en una copia, esto se conoce como la semántica de copia.
+
+* Asignación de caché. El caché es una zona de memoria "rápida" que contiene copias de datos de una fuente original.
+En muchos casos, un proceso puede solicitar leer el mismo bloque de un dispositivo E/S; con el fin de hacer
+eficiente la operación, se toma la imágen en caché en lugar de pedir acceso a E/S.
+
+* Spooling. Un spool es un buffer que contiene la salida para un dispositivo que sólo puede atender una petición
+a la vez (una impresora por ejemplo). La técnica de spooling permite que varios procesos soliciten operaciones 
+E/S sobre un dispositivo sin que se mezclen dichas peticiones y las forma en una cola.
+
+* Reservación de dispositivos. El sistema operativo da acceso único a un proceso que necesite un dispositivo de
+E/S y controla los bloqueos indefinidos (deadlocks)
+
+* Manejo de errores. El núcleo puede recuperarse de errores en lecturas al dispositivo, no disponibilidad del
+dispositivo, escrituras con fallas. El núcleo debe retornar un código de error cuando falla la petición de E/S
+y reportar el problema a las bitacoras del sistema.
+
+* Traducción de nombres. Hace la conexión entre los dispositivos de hardware y los nombres de archivos simbólicos
+utilizados por las aplicaciones, y aplica un mapeo que traduce un nombre de cadena de caracteres a un manejador
+de dispositivo específico o dirección de dispositivo.
+
+* Seguridad. Los dispositivos de E/S se deben proteger para que los procesos no hagan uso indebido de ellos, por
+medio de esquemas de permisos.
+
+El kernel mantiene en estructuras de datos para aplicar las operaciones anteriores.
+	
+5. Manejo de las solicitudes al kernel.
+
+Un proceso que necesita una operación de E/S debe usar llamadas al kernel.
+
+Cuando se inicia la llamada, intervienen distintas capas de software
+
+* Aplicación.
+	+ Solicita E/S via una llamada al kernel.
+
+* Subsistema de E/S del kernel.
+	+ Recibe la llamada al sistema, checando que los parámetros sean correctos. 
+		Si puede satisfacer la solicitud por que ya está en caché, se devuelve a la aplicación
+		si no se bloquea al proceso y se envia una solicitud al manejador del dispositivo
+
+* Manejador de dispositivo.	 
+	+ Procesa la solicitud y emite los comandos al controlador, lo configura.
+
+* Controlado de dispositivo
+	+ Recibe los comandos y activa al dispositivo. Cuando se completa la E/S genera una interrupción
+
+
+* Manejador de Interrupciones
+	+ Recibe la interrupción del dispositivo de E/S, almacena los datos en un buffer del manejador de
+	dispositivos , activa al manejador de dispositivo
+
+* Manejador de dispositivo.
+	+ Determina cuál E/S se completó, determina el estado de la solicitud y le señala al subsistema de E/S
+	del kenrle que la solicitud se ha completado
+
+* Subsistema de E/S del kernel.
+	+ Transfiere los datos al proceso y reactiva al proceso suspendido
+
+* Aplicación
+	+ Toma los datos y continua trabajando.
+ 
+	
+A nivel de desempeño, la administración de E/S demanda recursos de cómputo dado que 
+	+ Necesita CPU para ejecutar los manejadores de dispositivos, y código de E/S del kernel
+	+ Se aplican cambios de contexto debido a interrupciones
+	+ Copia de datos
+
+
+	 
+6. Procesamiento de interrupciones E/S en Xinu.
+
+
+El sistema operativo Xinu manipula las interrupciones con un conjunto de rutinas en ensamblador.
+No todo el manejo de interrupciones de E/S está hecho en ensamblador, sólo las rutinas que permiten salvar el contexto,
+identificar el dispositivo que genera la interrupción y restaurar el contexto al regresar de la interrupción. Y cuando
+recibe la interrupción del dispositivo, invoca rutinas escritas en C.
+
+
+La arquitectura 80x86 emplea la técnica de usar un vector de interrupciones con el fin de manejar excepciones e interrupciones
+de dispositivos externos.
+
+Cuando el dispositivo genera una interrupción, coloca una señal en la linea de interrupciones del bus.
+Si la CPU tiene habilitadas las interrupciones, checa si existe una señal al concluir una instrucción máquina.
+Para manejar la interrupción, el procesador deshabilita otras interrupciones y envia una señal al bus, pidiendo que
+el dispositivo que interrumpe retorne el tipo de interrupción, que es un número entero, v.
+Cuando la CPU recibe el tipo de interrupción, guarda en la pila del programa el registro FLAGS y los registros CS e IP.
+Se carga entonces a CS:IP un nuevo valor que indica la dirección de la rutina de servicio de interrupción (Interrupt
+service routine o ISR) que está en memoria en la localidad 4*v. En dicha localidad se almacena la dirección de la rutina
+del BIOS que maneja la interrupción.
+
+Las rutinas ISR están ubicadas de la localidad 0000H a la localidad 0400H de RAM de la arquitectura 80x86.
+
+Cada dispositivo tiene un tipo único de interrupción (y también una dirección única en el vector de interrupción), de
+tal manera que es posible descubrir que dispositivo necesita atención.
+
+Por ejemplo, el teclado tiene un número de interrupción 09H, lo cual implica que la dirección del ISR está en la localidad
+024H de memoria. Entonces cuando llegar una interrupción, el tipo de interrupcion es 09, del teclado y se invoca al ISR
+que esta la localidad 024H.
+
+A continuación se presenta una tabla con el número de interrupción y dirección de algunos dispositivos o excepciones
+
+#Interrupción		Dirección		Uso
+00H			0000			División por cero
+01H			0004			Singlestep de un programa	
+03H			000C			Breakpoint de un programa			
+04H			0010			Overflow aritmético
+08H			0020			Generado por un "tick" del reloj en hardeware
+09H			0024			Generado por un acción del teclado
+0BH			002C			Generado por el puerto COM1
+0CH			0030			Generado por el puerto COM2
+0EH			0038			Atención al floppy
+0FH			003C			Generado por el puerto paralelo
+1BH			006C			Generado por Ctrl-Break
+
+
+Una interrupción actua como una llamada a un procedimiento. El procesador ejecuta el código del ISR y retorna a la 
+instrucción que se estaba ejecutando antes de la interrupción. Para hacer la interrupción transparente a un programa en
+ejecución, el ISR debe guardad y restaurar el contexto. Esto consiste en guardar los registros como CS o IP. Cuando se
+retorna de la interrupción, los registros FLAGS, CS e IP son restaurados.
+
+Sin embargo, los ISR de la computadora no tienen ninguna lógica para invocar al kernel del sistema operativo. Se debe 
+aplicar una técnica para obligar la invocación a las rutinas del kernel y luego dejar que las rutinas del BIOS se ejecuten.
+
+Dado que cada interrupción tiene una dirección de memoria, es posible escribir en dicha dirección y cambiar el contenido
+de dicha dirección.
+
+Xinu, al momento de iniciar al kernel, modifica las direcciones de memoria de cada interrupción que desea manipular
+haciendo que direccione a una rutina ensamblador, denominada intcom, que es la responsable de guardar el contexto del
+programa que se interrumpio e invocar al manejador de la interrupción.
+
+El vector de interrupciones en Xinu es de tamaño 32 (20H). El vector contiene por cada entrada una estructura de datos
+denominada intmap, que indica el mapeo de dispositivo a rutina.
+
+
+En el archivo io.h de Xinu se encuentra definida la estructura de datos
+
+
+
+/* io.h -  fgetc, fputc, getchar, isbaddev, putchar */
+
+
+#define	INTVECI	inint		/* input interrupt dispatch routine	*/
+#define	INTVECO	outint		/* output interrupt dispatch routine	*/
+extern	int	INTVECI();
+extern	int	INTVECO();
+
+#define NMAPS	0x20		/* number of intmap entries		*/
+struct	intmap	{		/* device-to-interrupt routine mapping	*/
+	char	ivec;		/* interrupt number			*/
+	char	callinst;	/* the call instruction			*/
+	word	intcom;		/* common interrupt code		*/
+	word	oldisr_off;	/* old int. service routine offset	*/
+	word	oldisr_seg;	/* old int. service routine segment	*/
+	int	(*newisr)();	/* pointer to the new int. ser. routine */
+	word	mdevno;		/* minor device number			*/
+	word	iflag;		/* if nonzero, call the old isr		*/
+	};
+
+/*
+ * NOTE: The intmap structure takes a total of 7 words or 14 bytes
+ * per record.
+ */
+
+extern	struct intmap far *sys_imp;	/* pointer to intmap table	*/
+extern	int	nmaps;		/* number of active intmap entries	*/
+
+#define	isbaddev(f)	( (f)<0 || (f)>=NDEVS )
+
+/* In-line I/O procedures */
+
+#define	getchar()	getc(CONSOLE)
+#define	putchar(ch)	putc(CONSOLE,(ch))
+#define	fgetc(unit)	getc((unit))
+#define	fputc(unit,ch)	putc((unit),(ch))
+
+extern	int	_doprnt();	/* output formatter			*/
+
+
+
+La constante NMAPS define el número de entradas en el vector de interrupciones.
+Por cada entrada del vector se almacena
+	+ El número de la interrupcion (ivec)
+	+ Un byte, que tiene el código máquina de la instrucción call intcom (ver el código intmap.asm)
+	+ Un word, que tiene la dirección de la rutina intcom
+	+ El segmento y offset del antiguo ISR, asi cuando Xinu concluye, restaura el ambiente a los viejos ISR
+	+ El apuntador a la función que maneja al dispositivo
+        + El número de dispositivo, que se pasa como parámetro a la función manejadora del dispositivo
+
+
+Los números de interrupciones y las funciones que activan al manejador de dispositivo quedan definidos en 
+el archvio bios.h
+
+/* bios.h */
+
+/*------------------------------------------------------------------------
+ *  ROM BIOS interface information for PCs
+ *------------------------------------------------------------------------
+ */
+
+#define DB0VEC		0x00		/* divide by zero exception vec	*/
+#define SSTEPVEC	0x01		/* single step exception vector	*/
+#define BKPTVEC		0x03		/* breakpoint exception vector	*/
+#define OFLOWVEC	0x04		/* overflow exception vector	*/
+
+#define	CLKVEC	0x08			/* Clock interrupt vector	*/
+#define	KBDVEC	0x09			/* Keyboard interrupt vector	*/
+#define	COM1VEC	0x0b			/* COM1 interrupt vector	*/
+#define	COM2VEC	0x0c			/* COM2 interrupt vector	*/
+#define	FLOPVEC	0x0e			/* Floppy interrupt vector	*/
+#define	PRLLVEC	0x0f			/* Parallel port interrupt vec	*/
+#define CBRKVEC	0x1b			/* Ctrl-Break interrupt vector	*/
+
+#define	BIOSFLG	0x100			/* BIOS flag for intmap		*/
+
+extern int _panic();			/* exception handler		*/
+extern int cbrkint();			/* ctrl-break handler		*/
+extern int clkint();			/* clock interrupt handler	*/
+
+
+Para apuntar al inicio de la tabla se define un apuntado denominado sys_imp, el cual puede ser usado para indexar
+al vector de interrupciones, con ayuda de la variable nmaps que identifica cuantas entradas hay en el vector. El
+siguiente código imprime al vector de interrupciones.
+
+#include 
+#include 
+#include 
+
+void prvecentry(struct intmap far * p){
+printf("Int# %x CALL %x intcom %x ISR %x OISR %x:%x MDEV %x %x\n",p->ivec,p->callinst,p->intcom,p->newisr,p->oldisr_seg,p->oldisr_off,p->mdevno,p);
+}
+
+xmain(){
+
+int i=0;
+
+for (i=0;i
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  mapinit  --  fill in an intmap table entry
+ *------------------------------------------------------------------------
+ */
+int mapinit(vec,newisr,mdevno)
+int vec;				/* interrupt vector no.		*/
+int (*newisr)();			/* addr. of new service routine	*/
+int mdevno;				/* minor device number		*/
+{
+	int i;				/* intmap entry			*/
+	word 	far *addr;		/* far address pointer		*/
+	struct 	intmap far *imp;	/* pointers to intmap		*/
+	int	flag;			/* upper byte of vector		*/
+
+	i = nmaps;
+	if ( i >= NMAPS )
+		return(SYSERR);
+	nmaps++;
+	imp = &sys_imp[i];		/* point to our intmap entry	*/
+	flag = (vec>>8) & 0xff;		/* pick up flag byte		*/
+	vec = vec & 0xff;		/* only low-order byte counts	*/
+	FP_SEG(addr) = 0;		/* interrupts are on page 0	*/
+	FP_OFF(addr) = vec * 4;		/* offset of this interrupt no.	*/
+
+/* set up the input intmap entry */
+	imp->iflag = flag;		/* deposit flag byte in iflag	*/
+	imp->oldisr_off = *addr;	/* offset			*/
+	imp->oldisr_seg = *(addr + 1);	/* segment			*/
+
+/* the following is highly machine dependent */
+	*addr = FP_OFF(imp)+1;		/* point to call instruction	*/
+	*(addr+1) = FP_SEG(imp);	/* this code segment		*/
+	imp->newisr = newisr;		/* our input handler		*/
+	imp->mdevno = mdevno;		/* minor device no.		*/
+	imp->ivec = (char) vec;		/* interrupt vector		*/
+	return(OK);
+}
+
+/*------------------------------------------------------------------------
+ *  maprestore  --  restore all old interrupt vectors from the intmap
+ *------------------------------------------------------------------------
+ */
+int maprestore()
+{
+	int	i;			/* intmap entry number		*/
+	word 	far *addr;		/* far address pointer		*/
+	struct 	intmap far *imp;	/* pointers to intmap		*/
+
+	if ( nmaps > NMAPS )
+		nmaps = NMAPS;		/* just to be sure		*/
+	for ( i=0; inewisr) == -1 )
+			continue;	/* if unused entry		*/
+		FP_SEG(addr) = 0;	/* interrupts are on page 0	*/
+		FP_OFF(addr) = imp->ivec * 4;	/* offset to the vector	*/
+		*addr = imp->oldisr_off;	/* offset		*/
+		*(addr+1) = imp->oldisr_seg;	/* segment		*/
+	}
+}
+
+
+En este código también se incluye la función que restaura al vector de interrupciones que existia antes de
+iniciar a Xinu.
+
+La función mapinit es invocada al momento de arrancar al kernel, y la función maprestore se invoca cuando
+el sistema operativo concluye (función xdone() o panic() )
+
+
+El siguiente código cambia el vector de interrupción del reloj, para invocar a otra función
+
+#include 
+#include 
+#include 
+int cuantos=0;
+int reloj(int mdevno) {
+ printf("procesando al reloj %d\n",mdevno);
+ clkint(mdevno);
+ _panic();
+ return 0;
+}
+
+xmain(){
+
+
+mapinit(CLKVEC,reloj,CLKVEC);
+return 0;
+}
+
+
+7. E/S Xinu independiente del dispositivo.
+
+El sistema operativo provee un medio ambiente de alto nivel a las aplicaciones para ocultar los detalles de los
+dispositivos periféricos. Para esto define una capa de rutinas de E/S independientes del dispositivo.
+
+Las aplicaciones accesan a los dispositivos dando un nombre en forma de cadena de caracteres.
+
+El conjunto de operaciones de alto nivel para dispositivos E/S que implanta Xinu son:
+getc	- lee un caracter del dispositivo
+putc	- escribe un caracter al dispositivo
+read	- lee un bloque de bytes del dispositivo
+write	- escribe un bloque de bytes al dispositivo
+control	- controla la configuración del dispositivo	
+seek	- posiciona un dispositivo 
+open	- abre una conexión al dispositivo
+close	- cierra al dispositivo
+init	- inicializa un dispositivo
+
+
+También se conocen como primitivas de E/S. En el diseño de Xinu se consideran que todas las llamadas son síncronas,
+es decir, el proceso que las invoca se suspende hasta que los datos son transferidos.
+
+La manera de relacionar las primitivas de E/S con el manejador de dispositivo es proveer una tabla que relaciona
+la vista de la aplicacion con las funciones reales del manejador de dispositivos.
+
+En Xinu a cada dispositivo se le asigna un número entero conocido como descriptor del dispositivo, dicha asignación
+se realiza cuando Xinu es configurado. A cada dispositivo se le asigna un nombre, que es una cadena de hasta 7
+caracteres. Al aplicar la configuración de Xinu, se establece la relación de nombre a descriptor de dispositivo.
+A nivel de aplicacion, el usuario usa una constante del preprocesador la cual tiene el descriptor del archivo.
+
+Cada vez que Xinu sufre una reconfiguracion en los dispositivos, necesita ser recompilado.
+
+La tabla que contiene las funciones del manejador de dispositivo se denomina la tabla de selección de dispositivo,
+la cual se indexa con el descriptor de dispositivo. Dicha tabla de dispositivos contiene una entrada por cada
+dispositivo que carge Xinu. Xinu utiliza el concepto de apuntadores a funciones para poder delegar por cada
+primitiva de E/S la función correspondiente del manejador de dispositivo. 
+
+El código que define a la tabla y todas las funciones esta en el codigo fuente de Xinu, con el nombre de conf.h
+(dicho archivo no se genera manualmente, sino con ayuda de un programa que recibe un archivo de configuracion
+Xinu)
+
+/* conf.h */
+/* (GENERATED FILE; DO NOT EDIT) */
+
+#define	NULLPTR	(char *)0
+
+/* Device table declarations */
+struct	devsw	{			/* device table entry		*/
+	int	dvnum;
+	char	dvnam[8];
+	int	(*dvinit)();
+	int	(*dvopen)();
+	int	(*dvclose)();
+	int	(*dvread)();
+	int	(*dvwrite)();
+	int	(*dvseek)();
+	int	(*dvgetc)();
+	int	(*dvputc)();
+	int	(*dvcntl)();
+	int	dvport;
+	int	dvivec;
+	int	dvovec;
+	int	(*dviint)();
+	int	(*dvoint)();
+	char	*dvioblk;
+	int	dvminor;
+	};
+
+extern	struct	devsw devtab[];		/* one entry per device		*/
+
+/* Device name definitions */
+
+#define	CONSOLE	0		/* type tty	*/
+#define	DS0	5		/* type dsk	*/
+#define	DOS	11		/* type dos	*/
+
+/* Control block sizes */
+
+#define	Ntty	5
+#define	Ndsk	1
+#define	Ndf	5
+#define	Ndos	1
+#define	Nmf	4
+
+#define	NDEVS	16
+
+/* Declarations of I/O routines referenced */
+
+extern	int	ioerr();
+extern	int	ttyinit();
+extern	int	ttyopen();
+extern	int	ttyread();
+extern	int	ttywrite();
+extern	int	ttygetc();
+extern	int	ttyputc();
+extern	int	ttycntl();
+extern	int	ttyiin();
+extern	int	lwinit();
+extern	int	ionull();
+extern	int	lwclose();
+extern	int	lwread();
+extern	int	lwwrite();
+extern	int	lwgetc();
+extern	int	lwputc();
+extern	int	lwcntl();
+extern	int	dsinit();
+extern	int	dsopen();
+extern	int	dsread();
+extern	int	dswrite();
+extern	int	dsseek();
+extern	int	dscntl();
+extern	int	lfinit();
+extern	int	lfclose();
+extern	int	lfread();
+extern	int	lfwrite();
+extern	int	lfseek();
+extern	int	lfgetc();
+extern	int	lfputc();
+extern	int	msopen();
+extern	int	mscntl();
+extern	int	mfinit();
+extern	int	mfclose();
+extern	int	mfread();
+extern	int	mfwrite();
+extern	int	mfseek();
+extern	int	mfgetc();
+extern	int	mfputc();
+
+
+/* Configuration and size constants */
+
+#define MEMMARK				/* enable memory marking	*/
+#define	NPROC	30			/* number of user processes	*/
+#define	NSEM    100			/* total number of semaphores	*/
+
+#define	VERSION	"6pc (1-Dec-87)"	/* label printed at startup	*/
+
+
+
+La estructura devsw contiene:
+	- el descriptor del dispositivo
+	- el nombre del dispositivo
+	- Apuntadores a las funciones que implantan las primitvas init,open,close, read,write, seek,getc,putc,
+	control
+	- Dirección del puerto de hardware del dispositivo
+	- Direcciones del vector de interrupciones
+	- Apuntadores a las rutinas que despachan las interrupciones
+	- Apuntador a un buffer
+	- El número de dispositivo
+
+La tabla de dispositivos se declara como un arreglo de estructuras devsw, y se denomina devtab.
+
+Cada primitiva de E/S recibe el número del descriptor de archivo y con él indexa la tabla de dispositivos.
+Entonces invoca a la correspondiente función del manejador de dispositivos que realiza el trabajo, es decir,
+le delega. 
+
+Por cada primitiva de E/S existe código fuente Xinu que la aplica. La técnica general es:
+	+ Recibir como primer parámetro el descriptor de dispositivo
+	+ Recibir los parámetros propios de la llamada
+	+ Checar que no se de un descriptor de archivos incorrecto, en ese caso retorna un error (constante SYSERR)
+	+ Obtener el apuntador a la entrada de la tabla de dispositivos correspondiente, usando como indice 
+	al descriptor de dispositivo
+	+ Invocar via el apuntador a la entrada y su correspondiente apuntador a función a la rutina que implanta
+	la primitiva para el dispositivo.
+  	+ retornar como resultado de la primitiva, el dado por la rutina del manejador de dispositivo
+
+La llamada read recibe 3 parámetros, el descriptor del dispositivo, un buffer donde debe depositar la lectura de los
+datos y cuantos datos quiere leer.
+El código se encuentra en la función read.c
+
+/* read.c - read */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  read  --  read one or more bytes from a device
+ *------------------------------------------------------------------------
+ */
+read(descrp, buff, count)
+int descrp, count;
+char *buff;
+{
+	struct	devsw	*devptr;
+
+	if (isbaddev(descrp) )
+		return(SYSERR);
+	devptr = &devtab[descrp];
+	return(	(*devptr->dvread)(devptr,buff,count) );
+}
+
+La llamada write recibe 3 parámetros, el descriptor del dispositivo, un buffer con los datos a escribir 
+y cuantos datos quiere escribir.
+
+/* write.c - write */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  write  --  write 1 or more bytes to a device
+ *------------------------------------------------------------------------
+ */
+write(descrp, buff, count)
+	int descrp, count;
+	char *buff;
+{
+	struct	devsw	*devptr;
+
+	if (isbaddev(descrp) )
+		return(SYSERR);
+	devptr = &devtab[descrp];
+	return(	(*devptr->dvwrite)(devptr,buff,count) );
+}
+
+La función getc y putc permite leer y escribir un caracter al dispositivo
+/* getc.c - getc */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  getc  --  get one character from a device
+ *------------------------------------------------------------------------
+ */
+getc(descrp)
+int descrp;
+{
+	struct	devsw	*devptr;
+
+	if (isbaddev(descrp) )
+		return(SYSERR);
+	devptr = &devtab[descrp];
+        return( (*devptr->dvgetc)(devptr) );
+}
+
+/* putc.c - putc */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  putc  --  write a single character to a device
+ *------------------------------------------------------------------------
+ */
+putc(descrp, ch)
+int descrp;
+char ch;
+{
+	struct	devsw	*devptr;
+
+	if (isbaddev	(descrp) )
+		return(SYSERR);
+	devptr = &devtab[descrp];
+	return(	(*devptr->dvputc)(devptr,ch) );
+}
+
+
+La función seek posiciona al dispositivo tantos bytes como se le indique.
+
+/* seek.c - seek */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  seek  --  position a device (very common special case of control)
+ *------------------------------------------------------------------------
+ */
+seek(descrp, pos)
+int descrp;
+long pos;
+{
+	struct	devsw	*devptr;
+
+	if (isbaddev(descrp) )
+		return(SYSERR);
+	devptr = &devtab[descrp];
+        return( (*devptr->dvseek)(devptr,pos) );
+}
+
+La funcion open y close permiten abrir y cerrar un dispositivo
+
+/* open.c - open */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  open  --  open a connection to a device/file (arg1 & arg2 optional)
+ *------------------------------------------------------------------------
+ */
+open(descrp, arg1, arg2)
+int	descrp;
+char	*arg1, *arg2;
+{
+	struct	devsw	*devptr;
+
+	if ( isbaddev(descrp) )
+		return(SYSERR);
+	devptr = &devtab[descrp];
+	return(	(*devptr->dvopen)(devptr, arg1, arg2) );
+}
+
+/* close.c - close */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  close  --  close a device
+ *------------------------------------------------------------------------
+ */
+close(descrp)
+int descrp;
+{
+	struct	devsw	*devptr;
+
+	if (isbaddev(descrp) )
+		return(SYSERR);
+	devptr = &devtab[descrp];
+	return( (*devptr->dvclose)(devptr));
+}
+
+De igual manera se definen las primitivas para init y control
+
+/* init.c - init */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  init  --  initialize a device
+ *------------------------------------------------------------------------
+ */
+init(descrp)
+int descrp;
+{
+	struct	devsw	*devptr;
+
+	if (isbaddev(descrp) )
+		return(SYSERR);
+	devptr = &devtab[descrp];
+        return( (*devptr->dvinit)(devptr) );
+}
+
+/* control.c - control */
+
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  control  --  control a device (e.g., set the mode)
+ *------------------------------------------------------------------------
+ */
+control(descrp, func, addr, addr2)
+int descrp, func;
+char *addr,*addr2;
+{
+	struct	devsw	*devptr;
+
+	if (isbaddev(descrp) )
+		return(SYSERR);
+	devptr = &devtab[descrp];
+	return(	(*devptr->dvcntl)(devptr, func, addr, addr2) );
+}
+
+
+En caso de que algunas operaciones no se puedan aplicar sobre un dispositivo  se puede seleccionar implantar
+la primitiva con dos tipos de funciones, ioerr o ionull, la primera retorna un error, la segunda retorna un ok.
+Quedan definidos en los archivos ioerr.c e ionull.c
+
+
+/* ioerr.c - ioerr */
+
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  ioerr  --  return an error (used for "error" entries in devtab)
+ *------------------------------------------------------------------------
+ */
+ioerr()
+{
+	return(SYSERR);
+}
+
+/* ionull.c - ionull */
+
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  ionull  --  do nothing (used for "don't care" entries in devtab)
+ *------------------------------------------------------------------------
+ */
+ionull()
+{
+	return(OK);
+}
+
+
+La tabla de dispositivos se inicializa por medio de un proceso que carga la configuración de Xinu y genera
+código en lenguaje C para llenar dicha tabla. El archivo conf.c  contiene dicha configuración. 
+
+/* conf.c */
+/* (GENERATED FILE: DO NOT EDIT) */
+
+#include 
+#include 
+
+/* device independent I/O switch */
+
+struct	devsw	devtab[NDEVS] = {
+
+/*------------------------------------------------------------------------
+ * Format of each entry is:
+ *
+ * device number, device name,
+ * init, open, close,
+ * read, write, seek,
+ * getc, putc, cntl,
+ * port addr, device input vector, device output vector,
+ * input interrupt routine, output interrupt routine,
+ * device i/o block, minor device number
+ *------------------------------------------------------------------------
+ */
+
+/* CONSOLE is tty on BIOS */
+0,"tty",
+ttyinit,ttyopen,ioerr,
+ttyread,ttywrite,ioerr,
+ttygetc,ttyputc,ttycntl,
+0,KBDVEC|BIOSFLG,0,
+ttyiin,ioerr,
+NULLPTR,0,
+
+/* GENERIC is tty on WINDOW */
+1,"",
+lwinit,ionull,lwclose,
+lwread,lwwrite,ioerr,
+lwgetc,lwputc,lwcntl,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,1,
+
+/* GENERIC is tty on WINDOW */
+2,"",
+lwinit,ionull,lwclose,
+lwread,lwwrite,ioerr,
+lwgetc,lwputc,lwcntl,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,2,
+
+/* GENERIC is tty on WINDOW */
+3,"",
+lwinit,ionull,lwclose,
+lwread,lwwrite,ioerr,
+lwgetc,lwputc,lwcntl,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,3,
+
+/* GENERIC is tty on WINDOW */
+4,"",
+lwinit,ionull,lwclose,
+lwread,lwwrite,ioerr,
+lwgetc,lwputc,lwcntl,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,4,
+
+/* DS0 is dsk on BIOS */
+5,"ds0",
+dsinit,dsopen,ioerr,
+dsread,dswrite,dsseek,
+ioerr,ioerr,dscntl,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,0,
+
+/* GENERIC is df on DSK */
+6,"",
+lfinit,ioerr,lfclose,
+lfread,lfwrite,lfseek,
+lfgetc,lfputc,ioerr,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,0,
+
+/* GENERIC is df on DSK */
+7,"",
+lfinit,ioerr,lfclose,
+lfread,lfwrite,lfseek,
+lfgetc,lfputc,ioerr,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,1,
+
+/* GENERIC is df on DSK */
+8,"",
+lfinit,ioerr,lfclose,
+lfread,lfwrite,lfseek,
+lfgetc,lfputc,ioerr,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,2,
+
+/* GENERIC is df on DSK */
+9,"",
+lfinit,ioerr,lfclose,
+lfread,lfwrite,lfseek,
+lfgetc,lfputc,ioerr,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,3,
+
+/* GENERIC is df on DSK */
+10,"",
+lfinit,ioerr,lfclose,
+lfread,lfwrite,lfseek,
+lfgetc,lfputc,ioerr,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,4,
+
+/* DOS is dos on MSDOS */
+11,"dos",
+ionull,msopen,ioerr,
+ioerr,ioerr,ioerr,
+ioerr,ioerr,mscntl,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,0,
+
+/* GENERIC is mf on DOS */
+12,"",
+mfinit,ioerr,mfclose,
+mfread,mfwrite,mfseek,
+mfgetc,mfputc,ioerr,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,0,
+
+/* GENERIC is mf on DOS */
+13,"",
+mfinit,ioerr,mfclose,
+mfread,mfwrite,mfseek,
+mfgetc,mfputc,ioerr,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,1,
+
+/* GENERIC is mf on DOS */
+14,"",
+mfinit,ioerr,mfclose,
+mfread,mfwrite,mfseek,
+mfgetc,mfputc,ioerr,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,2,
+
+/* GENERIC is mf on DOS */
+15,"",
+mfinit,ioerr,mfclose,
+mfread,mfwrite,mfseek,
+mfgetc,mfputc,ioerr,
+0,0,0,
+ioerr,ioerr,
+NULLPTR,3
+};
+
+
+
+
+
+
+8. Un manejador de dispositivos Xinu.
+
+A continuación se muestran los pasos para hacer un dispositivo, al cual se le va a denominar DUMMY.
+
+a) Hacer una copia del archivo PCXCONF, por ejemplo, a DMYCONF
+b) Agregar un nuevo dispositivo denominado dummy al archivo DMYCONF
+En la seccion de configuracion de dispositivos, indicar el dispositivo dummy, el cual usa la función
+dummy:
+	        -i ionull -o ionull -c ionull
+                -r ionull -w ionull -s ionull
+                -g ionull -p ionull -n ionull
+
+En la definición de los dispositivos
+
+DUMMY is dummy name="dummy"
+
+c) Correr el comando de configuracion, que debe generar un archivo C y archivo H
+config -f DMYCONF -c dmy.c -h dmy.h
+
+Revisar el contenido del archivo dmy.h y dmy.c
+
+d) Copiar los archivos al codigo fuente de Xinu
+copy dmy.h ..\src\conf.h
+copy dmy.c ..\src\conf.c
+
+e) Recompilar el kernel de Xinu
+cd ..\src
+complib
+
+f) El siguiente programa prueba el funcionamiento del nuevo manejador de dispositiovs
+#include 
+xmain() {
+int dd = getdev("dummy");
+char buffer[8];
+int rtn;
+printf("DUMMY Device Descriptor %d \n",dd);
+rtn=open(dd);
+printf("DUMMY open retorno %d\n",rtn);
+rtn=init(dd);
+printf("DUMMY init retorno %d\n",rtn);
+rtn=read(dd,buffer,8);
+printf("DUMMY read retorno %d\n",rtn);
+rtn=write(dd,buffer,8);
+printf("DUMMY write retorno %d\n",rtn);
+rtn=seek(dd,8);
+printf("DUMMY seek retorno %d\n",rtn);
+rtn=getc(dd);
+printf("DUMMY getc retorno %d\n",rtn);
+rtn=putc(dd,buffer[0]);
+printf("DUMMY putc retorno %d\n",rtn);
+rtn=control(dd,0,0,0);
+printf("DUMMY control retorno %d\n",rtn);
+rtn=close(dd);
+printf("DUMMY close retorno %d\n",rtn);
+xdone();
+return 0;
+}
+
+
+Se puede escribir cualquier manejador de dispositivo Xinu, por ejemplo uno que manipule el puerto serie
+de la computadora, o el ratón.
+
+8. Reloj.
+
+9. Manejador de Dispositivos de terminales Xinu.
+
+
+
+ 

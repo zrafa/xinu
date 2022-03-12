@@ -1,0 +1,619 @@
+
+Tema IV
+Sistemas de archivos.
+
+1. Conceptos de archivos.
+
+Un archivo es una secuencia de datos (secuencia de caractes, bytes o enteros) con un nombre asignado y que se graba
+en almacenamiento secundario.
+
+Un archivo puede tener diversas estructuras:
+	+ De texto, secuencia de caracteres organizados en linea
+	+ Código fuente, conjunto de rutinas y declaraciones
+	+ Objeto, secuencia de bytes que pueden ser entendidas por el cargador del sistema operativo
+	+ Ejecutable, lo toma el sistema operativo y lo lleva a memoria y procesador
+
+La filosofía de diseño es dejar que el sistema operativo entienda la estructura o sea responsabilidad de las
+aplicaciones.
+
+Por ejemplo, para UNIX, la mayoria de los archivos son flujos de bytes, sin importar su contenido.
+
+Los archivos tienen atributos asociados.
+	+ Nombre, asocia una cadena de caracteres al archivo para que sea legible por un ser humano
+	+ Tipo, en el caso de que el sistema operativo tenga una distinción
+	+ Ubicación, indica en que parte del dispositivo está localizado el archivo
+	+ Tamaño, indica el número de bytes o palabras o bloques
+	+ Protección, para controlar el acceso a las distintas operaciones sobre un archivo
+	+ Hora, fecha
+	+ Usuario propietario del archivo
+
+La información de un archivo reside en una estructura denominada directorio.
+
+Las operaciones sobre un archivo son
+	+ crear
+	+ escribir
+	+ leer
+	+ posicionamiento en el archivo
+	+ borrado
+	+ abrir
+	+ cerrar
+
+2. Estructura de directorios.
+
+Un directorio registra la información asociada con uno o más archivos.
+
+Un directorio contiene por cada archivo, una entrada.
+
+Los directorios residen en almacenamiento secundario, al igual que los archivos.
+
+El directorio puede ser visto como una tabla de símbolos que traduce los nombres de los archivos a sus entradas en
+el directorio. 
+
+Las operaciones sobre un directorio son
++ Busqueda de un archivo
++ Creación de un archivo
++ Borrado de un archivo
++ Listar el contenido de un archivo
++ Renombrar un archivo
++ Recorre el sistema de archivos
+
+Un directorio se puede estructurar de diversas maneras
+
++ Directorio de un sólo nivel
+Todos los archivos están contenidos en el mismo directorio. Este esquema es fácil de implementar en el sistema
+operativo, sin embargo surgen problemas cuando dos archivos coinciden en nombres o mas usuarios lo accesan.
++ Directorio de dos niveles.
+Por cada usuario que tenga el sistema operativo, se crea un directorio de usuarios, y cada usuario tiene un 
+directorio de un sólo nivel. La ruta del archivo queda definido por el nombre del usuario y el nombre del archivo,
+permitiendo que se tenga el mismo nombre de archivo por cada diferente usuario.
++ Directorios con estructura de árbol.
+Permite organizar archivos en estructuras de subdirectorios. Existe un directorio raíz,  en el cual se pueden
+crear archivos y mas subdirectorios. No existe límite en la profundidad del árbol y la ruta de un archivo queda
+definido por la trayectoria que se debe recorrer en el árbol a partir del directorio raíz. Una ruta absoluta
+es aquella en la que se incluye el directorio raíz y toda la trayectoria a seguir; una ruta relativa es con
+respecto a un directorio.
+El directorio se toma como otro archivo, el cual se trata con operaciones especiales.
+A cada usuario se le puede asignar un directorio de trabajo.
++ Directorios con estructura de grafo acíclico.
+Es similar a la estructura de árbol, pero se puede dar la capacidad de que se establezca una o más ligas a un
+archivo original. De tal manera que un archivo que reside en una ruta, puede ser el mismo en distinta ruta y
+con distinto nombre. Esto permite que se defina uno o más alias para cada archivo.
+
+
+4. Estructura del sistema de archivos.
+
+A la estructura de directorios y archivos se le conoce como sistema de archivos.
+El sistema de archivos reside en el almacenamiento secundario. 
+Los sistemas de archivos se implementan en una estructura de capas o módulos. Las aplicaciones conciben los
+archivos en una estructura de directorios (de un sólo nivel, arborescente o de grafo acíclico). Un módulo de
+organización de archivos tiene como función traducir la localización de la información lógica a localización
+física (tipicamente organizada en bloques de disco), a los cuales debe leer, escribir o buscar. Para interactuar
+con el nivel físico, utiliza el subsistema de E/S del núcleo del sistema operativo, el cual delega las operaciones
+de bajo nivel a los manejadores de dispositivos.
+
+Un sistema de archivos se debe inicializar en un disco o una partición del mismo. Cuando el sistema de archivos
+queda con las estructuras de datos adecuadas, se puede utilizar, ya sea anexandolo a un sistema de archivos 
+existente o como un nuevo sistema de archivos. Cada diseño de un sistema operativo elige el tipo de estructura
+del sistema de archivos. Algunos sistemas de archivos soportan distintas variedades de sistemas de archivos y
+permiten manipularlos de manera uniforme.
+
+Al proceso de incorporar a un sistema de archivos al sistema operativo se conoce como montado.
+
+5. Métodos de asignación.
+
+Cada directorio y archivo necesita ocupar espacio en disco. El sistema operativo es el responsable de administrar
+dicho espacio, ya sea para reservar o liberar bloques del almacenamiento secundario.
+Un archivo puede ir creciendo o decreciendo en tamaño, luego entonces el sistema operativo debe controlar dichas
+operaciones, manipulando los bloques del almacenamiento secundario.
+
+Existen tres métodos de asignación de espacio
+
++ Contigua. Por cada archivo que se tiene, se requiere que ocupen bloques de disco contiguos, de tal manera
+que sólo se necesita conocer el inicio del bloque y la longitud (en bloques) del archivo. El problema comienza 
+cuando se necesita asignar más espacio al archivo. Se puede reasignar el archivo a un nuevo bloque con mayor
+dimensión pero se pueden presentar problemas de fragmentación interna.
++ Enlazada. Cada archivo tiene una lista ligada, que permite que los bloques de disco estén repartidos en cualquier
+parte. Se necesita conocer el bloque de inicio y fin. Al realizar un busqueda de acceso aleatorio, se debe aplicar
+un algoritmo secuencial, lo cual hace que la asignación enlazada no sea eficiente. 
++ Indexada. En lugar de tener una lista ligada, se puede concentrar en un bloque todos los índices (bloque de
+índices o index block), lo cual lleva a tener una tabla de índices, para cada bloque que compone al archivo. El
+acceso aleatorio al archivo es eficiente y directo. Pero la desventaja es que se debe reservar un bloque entero
+para índices, inclusive para aquellos archivos de tamaño pequeño, quedando desperdiciado el espacio reservado
+para índices. Además, si no se reserva suficiente espacio para índices de bloques, para un archivo grande se
+puede perder la posibilidad de no poderlo manejar.
++ Combinada.
+Consiste en tener un bloque índice, cierta cantidad de entradas para apuntadores de bloques de datos. Cuando
+dichos apuntadores son completamente utilizados, se usa un nivel de indirecto sencillo, en el cual se hace un
+apuntador a un bloque de apuntadores de datos. Si este nivel no es suficiente, se hace un nivel indirecto doble
+para tener un apuntador a un bloque que apunta a diversos bloques que contienen apuntadores a los datos, e 
+inclusive se puede extender a cuatro niveles. 
+
+6. Implantación de un sistema de archivos en Xinu.
+
+Xinu tiene un manejador de dispositivo de disco (device driver) que permite administar la lectura y escritura de bajo
+nivel.
+
+El sistema de archivos de Xinu se encarga entonces de manipular lo siguiente:
+        + Administración de un sistema de directorios de un sólo nivel.
+	+ Administración de bloques de datos a un archivo, que consiste en asignar o liberar bloques de disco según
+	se necesite.
+	+ Administración de índices de bloques. Permite manipular una lista ligada de bloques índices, donde cada
+	bloque índice contiene múltiples indices que hacen referencia a bloques de datos.
+
+Y Xinu, respetando la filosofía de las primitivas de E/S, debe permitir aplicar operaciones como read, write, seek, getc,
+putc sobre archivos.
+
+7. Administración de los bloques índice.
+
+Cada índice bloque contiene un arreglo de apuntadores a las direcciones de disco donde residen los bloques de datos.
+Cada arreglo es de longitud 29 y cada bloque de datos es de 512 bytes, por lo que cada índice de bloques puede indexar
+hasta 14848 bytes.  Un bloque de índices (o bloque-i) contiene cuales bytes de un archivo indexa y un número o apuntador
+al siguiente bloque-i de la lista de índices.
+
+Cada bloque-i ocupa 64 bytes. Es decir por un bloque de 512 bytes de disco, se tienen 8 bloques-i.
+Dado un número de bloque-i, se puede dividir el número entre 8 (o correr hacia la derecha 3 posiciones el numero de bloque)
+y con eso saber en que bloque físico está localizado el bloque-i, considerando que en el primer bloque físico está 
+el directorio de Xinu.
+Para conocer el desplazamiento en bytes de un bloque-i dentro de un bloque físico, basta con obtener un módulo 7 al número
+de bloque-i y multiplicarlo por el tamaño de la estructura iblk.
+
+En el archivo iblock.h de Xinu, se muestra la estructura de datos que define a un bloque-i y dos macros para saber
+el bloque fisico, dado el número de bloque-i y su desplazamiento en bytes en el bloque físico.
+
+/* iblock.h - ibtodb, ibdisp */
+
+typedef	int		IBADDR;		/* iblocks addressed 0,1,2,...	*/
+
+#define	IBLEN		29		/* # d-block ptrs in an i-block	*/
+#define	IBNULL		-1		/* null pointer in i-block list	*/
+#define	IBAREA		1		/* start of iblocks on disk	*/
+#define	IBWDIR		TRUE		/* ibnew: write directory	*/
+#define	IBNWDIR		FALSE		/* ibnew: don't write directory	*/
+
+struct	iblk		{		/* index block layout		*/
+	long		ib_byte;	/* first data byte indexed by	*/
+					/*  this index block		*/
+	IBADDR		ib_next;	/* address of next i-block	*/
+	DBADDR		ib_dba[IBLEN];	/* ptrs to data blocks indexed	*/
+};
+
+#define	ibtodb(ib)	(((ib)>>3)+IBAREA)/* iblock to disk block addr.	*/
+#define	ibdisp(ib)	(((ib)&07)*sizeof(struct iblk))
+
+El siguiente programa muestra el uso de las definiciones.
+
+#include 
+
+
+xmain(){ 
+ int niblock[]={3,7,17,29,55},i;
+
+ printf("%d Bytes por entero, %d Bytes por long\n",sizeof(int),sizeof(long));
+ printf("%d Bytes por bloque\n",sizeof(struct iblk));
+ for (i=0;i<5;i++){
+	printf("Bloque-i %d en bloque fisico %d y con desplazamiento %d\n",niblock[i],ibtodb(niblock[i]),ibdisp(niblock[i]));
+ }
+ xdone();
+ return 0;
+}
+
+8. Estructura de directorio.
+
+Xinu contiene un sólo directorio, donde guarda la información sobre los archivos. El número máximo de archivos que puede
+contener es de 28 archivos. 
+
+Cada entrada del directorio contiene la longitud del archivo, la dirección del primer bloque-i y el nombre del archivo.
+La estructura de directorio contiene:
+	+ El número de bloques-i en el disco
+	+ Un apuntador a la lista de bloques de datos libres
+	+ Un apuntador a la lista de bloques-i libres
+	+ Un identificador de disco
+	+ Número actual de archivos
+	+ Un arreglo de entradas con la información sobre los archivos.
+
+En el archivo dir.h se encuentra la definición de un directorio.
+
+/* dir.h */
+
+#define FDNLEN	10			/* length of file name + 1	*/
+#define NFDES	28			/* number of files / directory	*/
+
+struct	fdes	{			/* description of each file	*/
+	long	fdlen;			/* length in bytes		*/
+	IBADDR	fdiba;			/* first index block		*/
+	char	fdname[FDNLEN];		/* zero terminated file name	*/
+};
+
+struct	dir	{			/* directory layout		*/
+	int	d_iblks;		/* i-blocks on this disk	*/
+	DBADDR	d_fblst;		/* pointer to list of free blks	*/
+	IBADDR	d_filst;		/* pointer to list of free iblks*/
+	int	d_id;			/* disk identification integer	*/
+	int	d_nfiles;		/* current number of files	*/
+	struct	fdes	d_files[NFDES];	/* description of the files	*/
+};
+
+struct	freeblk	{			/* shape of block on free list	*/
+	DBADDR	fbnext;			/* address of next free block	*/
+};
+
+extern struct fdes *dfdsrch();
+
+
+9. Creación de un sistema de archivos Xinu
+
+Todo sistema operativo al ser instalado en un equipo de cómputo, necesita construir un sistema de archivos a donde va
+a copiar los archivos necesarios para aplicaciones y usuarios.
+
+En el caso de Xinu, la creación del sistema de archivos consiste en :
+
++ Crear el directorio único.
++ Crear la estructura de bloques-i
++ Crear la estructura de bloques de datos
+
+/* dumkfs.c - dumkfs, dumkdl, dumkil */
+
+#include 
+#include 
+#include 
+
+
+/*------------------------------------------------------------------------
+ *  dumkfs  --  make a fresh file system on a disk
+ *------------------------------------------------------------------------
+ */
+dumkfs(diskdev, niblks, nblocks, diskid, verbose)
+int	diskdev;
+int	niblks;
+unsigned nblocks;
+int	diskid;
+Bool	verbose;
+{
+	DBADDR	firstdb, lastdb;
+	struct	dir	*dirptr;
+
+	if (verbose)
+		kprintf("Clearing directory block...\n");
+	dirptr = dsdirec(diskdev);
+	firstdb = (DBADDR) (ibtodb(niblks-1) + 1);
+	lastdb = (DBADDR) (nblocks - 1);
+	dirptr->d_iblks = niblks;
+	dirptr->d_fblst = firstdb;
+	dirptr->d_filst = (IBADDR) niblks-1;
+	dirptr->d_id = diskid;
+	dirptr->d_nfiles = 0;
+	write(diskdev, dskbcpy(dirptr), DIRBLK);
+	dumkil(diskdev, niblks, verbose);
+	dumkdl(diskdev, firstdb, lastdb, verbose);	
+	if (verbose)
+		kprintf("Done initializing disk...\n");
+	return(OK);
+}
+
+
+/*------------------------------------------------------------------------
+ *  dumkdl  --  link all data blocks into free list to init. file system
+ *------------------------------------------------------------------------
+ */
+dumkdl(diskdev, firstfb, lastfb, verbose)
+int	diskdev;
+DBADDR	firstfb, lastfb;
+Bool	verbose;
+{
+	struct	freeblk	*buff;
+	DBADDR	dba;
+	char	*bptr;
+	int	i;
+
+	if (verbose)
+		kprintf("Linking %u free blocks from %u through %u...\n",
+			lastfb - firstfb + (DBADDR)1, firstfb, lastfb);
+	bptr = buff = (struct freeblk *) getbuf(dskdbp);
+	for (i=0 ; ifbnext = (DBADDR) (dba+1);
+		write(diskdev, dskbcpy(buff), dba);
+                if (verbose)
+			kprintf("%5u..",dba);
+		if (verbose && (dba%500 == 0))
+			kprintf("%5u\r",dba);
+	}
+	buff->fbnext = (DBADDR) DIRBLK;
+	write(diskdev, buff, dba);
+	if (verbose)
+		kprintf("\nDone linking data blocks...\n");
+	return(OK);
+}
+
+
+
+/*------------------------------------------------------------------------
+ *  dumkil  --  link ALL i-blocks onto a free list
+ *------------------------------------------------------------------------
+ */
+dumkil(diskdev, niblks, verbose)
+int	diskdev;
+int	niblks;
+Bool	verbose;
+{
+	struct	iblk	iblock;
+	IBADDR	ibnum;
+	int	i;
+
+	if (verbose)
+		kprintf("Linking %d i-blocks together...\n", niblks);
+	ibclear(&iblock, 0L);
+	for (ibnum=niblks-1 ; ibnum>0 ; ibnum--) {
+		iblock.ib_next = ibnum-1;
+		ibput(diskdev, ibnum, &iblock);
+	}
+	iblock.ib_next = IBNULL;
+	ibput(diskdev, 0, &iblock);
+	if (verbose)
+		kprintf("Done linking i-blocks...\n");
+	return(OK);
+}
+
+xmain(){
+ int dd= getdev("ds0");
+ int rtn=-1;
+ rtn=dumkfs(dd,256,720,0, TRUE);
+ printf("Retorno %d\n",rtn);
+ xdone();
+ return 0;
+}
+
+
+
+10. Operaciones sobre bloques-i.
+
+La rutina de inicialización del sistema de archivos liga todos los bloques-i en un lista de nodos libres.
+Los bloques-i son un conjunto de bloques de disco consecutivos.
+
+Sobre los bloques-i se pueden realizar las siguientes operaciones.
+
++ Limpiar un bloque-i.  Consiste en poner todos los apuntadores a bloques de datos a nulo, indicar que el siguiente
+i-bloque es núlo. La rutina ibclear (archivo ibclear.c) aplica esta operación.
+
+/* ibclear.c - ibclear */
+
+#include 
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  ibclear  --  clear in-core copy of an iblock
+ *------------------------------------------------------------------------
+ */
+ibclear(ibptr, ibbyte)
+struct	iblk	*ibptr;
+long	ibbyte;
+{
+	int	i;
+
+	ibptr->ib_byte = ibbyte;
+	for (i=0 ; iib_dba[i] = DBNULL;
+	ibptr->ib_next = IBNULL;
+}
+
++ Leer un bloque-i.
+Dado el número de dispositivo del disco que contiene un sistema de archivos Xinu, un número de bloque-i que se quiere
+tomar y un buffer donde depositar la información, se puede accesar el contenido de un bloque-i.
+El algoritmo consiste en calcular la dirección fisica del bloque-i y pedir al manejador de dispositivo de discos, una
+lectura, resultado que se vacia en el buffer.
+La función ibget (archivo ibget.c) realiza esta operación
+/* ibget.c - ibget */
+
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  ibget  --  get an iblock from disk given its number
+ *------------------------------------------------------------------------
+ */
+ibget(diskdev, inum, loc)
+int	diskdev;
+IBADDR	inum;
+struct	iblk	*loc;
+{
+	char	*from, *to;
+	int	i;
+	char	*buff;
+
+	buff = getbuf(dskdbp);
+	read(diskdev, buff, ibtodb(inum));
+	from = buff + ibdisp(inum);
+	to = (char *)loc;
+	for (i=0 ; i
+#include 
+
+xmain(){
+   IBADDR i=0;
+   struct iblk ibloque;
+   int dd= getdev("ds0");
+
+   for(i=0;i<16;i++){
+	memset(&ibloque,0,sizeof(struct iblk));
+        printf("Leyendo i-bloque %u ",i);
+	ibget(dd,i,&ibloque);
+	printf("ib_byte %d ib_next %d ...",ibloque.ib_byte,ibloque.ib_next);
+   }
+   xdone();
+   return 0;
+}
+
++ Escribir un bloque-i
+
+Dado el número de dispositivo del disco que contiene un sistema de archivos Xinu, un número de bloque-i que se quiere
+escribir y un buffer con la información a escribir.
+El algoritmo consiste en
+   +) Calcula la dirección fisica del i-bloque
+   +) Obtener un semáforo asociado para que la operación de escritura sea aplicada por un solo proceso.
+   +) Leer el i-bloque de disco a memoria, la imágen en memoria llenarla con los datos a escribir y escribir
+	al disco.
+   +) Liberar el semáforo.
+
+El código que aplica esta operación, ibput.c, se muestra a continuación
+
+
+/* ibput.c - ibput */
+
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+
+/*------------------------------------------------------------------------
+ *  ibput  --  write an iblock back to disk given its number
+ *------------------------------------------------------------------------
+ */
+ibput(diskdev, inum, loc)
+int	diskdev;
+IBADDR	inum;
+struct	iblk	*loc;
+{
+	DBADDR	dba;
+	char	*buff;
+	char	*to, *from;
+	int	i;
+	int	ibsem;
+
+	dba = ibtodb(inum);
+	buff = getbuf(dskdbp);
+	ibsem = ((struct dsblk *)devtab[diskdev].dvioblk)->dibsem;
+	wait(ibsem);
+	read(diskdev, buff, dba);
+	to = buff + ibdisp(inum);
+	from = (char *)loc;
+	for (i=0 ; i
+#include 
+
+xmain(){
+   IBADDR i=0;
+   struct iblk ibloque;
+   int dd= getdev("ds0");
+
+   ibloque.ib_byte=8;
+   for(i=0;i<16;i++){
+	
+        printf("Escribiendo i-bloque %u ",i);
+	ibput(dd,i,&ibloque);
+   }
+   xdone();
+   return 0;
+}
+
+
++ Asignar y retornar un bloque-i de la lista libre.
+Cada vez que un archivo es creado se debe pedir un i-bloque. El directorio de Xinu contiene la dirección del 
+i-bloque libre. A partir de esa dirección se pide un i-bloque y el siguiente libre queda almacenado en el directorio.
+La función ibnew se encarga de pedir un bloque-i.
+Cuando un archivo se remueve, se deben liberar los bloques-i con los que se asocia. La liberación debe cuidar el dejar
+los bloques de datos a los que apunta el bloque-i, también libres. La entrada del directorio de bloques-i libres queda
+modificada. La función iblfree realiza esta operación
+
+El siguiente programa pide 32 i-bloques.
+#include 
+#include 
+
+xmain(){
+ int i=0;
+ int dd= getdev("ds0");
+ int asignado=-1; 
+ for (i=0;i<32;i++) {
+	asignado=ibnew(dd,TRUE);
+	printf("i-bloque asignado %d\n",asignado);
+ }
+ xdone();
+ return 0;
+}
+
+El siguiente programa libera el i-bloque 230 (suponiendo que previamente fue asignado)
+#include 
+#include 
+
+xmain(){
+ int dd= getdev("ds0");
+ int rtn=-1;
+
+ rtn=iblfree(dd, 230);
+ printf("Liberado con retorno %d\n",rtn);
+ xdone();
+ return 0;
+}
+
+
+
+11. Implantación de las primitivas de E/S con archivos.
+Xinu implanta sobre el sistema de archivos las llamadas open, close, read, write, getc, putc, seek, init,cntl.
+
+Con el fin de aplicar la filosofía de una tabla de dispositivos, establece una serie de entradas en dicha tabla, que
+son pseudodispositivos que permiten controlar cada archivo. Cada vez que un proceso abre un archivo, el sistema de
+archivos busca por un pseudo-dispositivo sin uso, lo inicializa y retorna un identificador de dispositivo. Con dicho
+identificador se pueden utilizar las demás primitivas de E/S.
+
+Xinu contiene una tabla de archivos abiertos. Dicha tabla tiene una entrada, por archivo, que indica el identificador
+de pseudodispositivo,  el dispositivo de disco en el que está asignado, el PID del proceso que lo está usando, la posición
+actual del archivo.
+
+La estructura flblk contiene esa información, queda definida en el archivo file.h
+
+/* file.h */
+
+/* Local disk layout: disk block 0 is directory, then index area, and	*/
+/* then data blocks.  Each disk block (512 bytes) in the index area	*/
+/* contains 8 iblocks, which are 64 bytes long.  Iblocks are referenced	*/
+/* relative to 0, so the disk block address of iblock k is given by	*/
+/* truncate(k/8)+1.  The offset of iblock k within its disk block is	*/
+/* given by 64*remainder(k,8).  The directory entry points to a linked	*/
+/* list of iblocks, and each iblock contains pointers to IBLEN (29) data*/
+/* blocks. Index pointers contain a valid data block address or DBNULL.	*/
+
+#define	EOF		-2		/* value returned on end-of-file*/
+#define	FLREAD		001		/* fl_mode bit for "read"	*/
+#define	FLWRITE		002		/* fl_mode bit for "write"	*/
+#define	FLRW		003		/* fl_mode bits for read+write	*/
+#define	FLNEW		010		/* fl_mode bit for "new file"	*/
+#define	FLOLD		020		/* fl_mode bit for "old file"	*/
+
+struct	flblk	{			/* file "device" control block	*/
+	int	fl_id;			/* file's "device id" in devtab	*/
+	int	fl_dev;			/* file is on this disk device	*/
+	int	fl_pid;			/* process id accessing the file*/
+	struct	fdes	*fl_dent;	/* file's in-core dir. entry	*/
+	int	fl_mode;		/* FLREAD, FLWRITE, or both	*/
+	IBADDR	fl_iba;			/* address of iblock in fl_iblk	*/
+	struct	iblk	fl_iblk;	/* current iblock for file	*/
+	int	fl_ipnum;		/* current iptr in fl_iblk	*/
+	long	fl_pos;			/* current file position (bytes)*/
+	Bool	fl_dch;			/* has fl_buff been changed?	*/
+	char	*fl_bptr;		/* ptr to next char in fl_buff	*/
+	char	fl_buff[DBUFSIZ];	/* current data block for file	*/
+};
+
+#ifdef	Ndf
+extern	struct	flblk	fltab[];
+#endif
+
+
+Cuando un archivo es abierto, se debe especificar el identificador del dispositivo en donde va a residir, su nombre
+y su modo de apertura.
+
+El modo de apertura indica si el archivo se puede leer y/o escribir, si al abrirlo se debe checar si existía o no, 
+
+El archivo se inserta en el directorio y se le asignan bloques-i y bloques de datos.
+
+Como parte del diseño del sistema de archivos Xinu, se guarda en un buffer en memoria (512 bytes) los datos que se leen o
+escriben. Esto permite agilizar el manejo del disco, dado que no se escribe continuamente a éste, hasta que el buffer se
+llena o se cierra el archivo o se hace un posicionamiento del archivo mas alla del bloque actual; y si y solo sí el
+buffer en memoria ha sido coambiado. Esta técnica de vaciado (flush) permite optimizar al sistema de archivos.
+
+
+
+
