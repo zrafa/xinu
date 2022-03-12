@@ -1,0 +1,21 @@
+
+#terminal_output gfxterm
+#set gfxmode=1024x600x24
+
+#set gfxmode=auto
+set gfxpayload=800x600x24
+#set gfxpayload=auto
+insmod all_video
+#insmod gfxterm
+#terminal_output gfxterm
+
+#set gfxmode=640x480x16
+#set gfxpayload=keep
+insmod iso9660
+insmod vbe
+insmod vga
+insmod udf
+insmod multiboot
+# set root=(hd0,msdos1)
+multiboot /xinu.elf
+boot
