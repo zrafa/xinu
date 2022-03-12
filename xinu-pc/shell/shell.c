@@ -72,6 +72,7 @@ process	shell (
 		SHELL_BAN5,SHELL_BAN6,SHELL_BAN7,SHELL_BAN8,SHELL_BAN9);
 
 	fprintf(dev, "%s\n\n", SHELL_STRTMSG);
+	fprintf(dev, "type   help [ENTER]   for ehhhh... help.\n\n");
 
 	/* Continually prompt the user, read input, and execute command	*/
 

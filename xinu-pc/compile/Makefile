@@ -150,6 +150,7 @@ clean:
 	@echo removing xinu ...
 	@rm -f $(XINU)
 	@rm -f $(XINUXBIN)
+	@rm disk.iso
 
 #--------------------------------------------------------------------------------
 # QEMU grub system image test
