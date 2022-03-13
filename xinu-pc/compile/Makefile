@@ -115,7 +115,7 @@ xinu:	Makefile rebuild $(BLDDIRS) $(DEFSFILE) $(DEPSFILE) $(CONFH) $(CONFC) $(LD
 	@echo;echo 'Loading object files to produce GRUB bootable xinu'
 	@$(LD) $(LDFLAGS) $(LD_LIST) -o $(XINU)
 	@echo Copying xinu.elf to xinu.boot in the TFTP directory.
-	@$(ECHOxinu00) cp xinu.elf /srv/tftp/xinu.boot
+	# @$(ECHOxinu00) cp xinu.elf /srv/tftp/xinu.boot
 	@echo
 	
 
@@ -164,7 +164,7 @@ qemu-iso-pre: xinu test/grub/grub.cfg
 # Generates the Grub2-based ISO - see bochsrc.txt for info.
 # Requires grub2-mkrescue and xorriso be installed!
 run-qemu: qemu-iso-pre
-	grub-mkrescue -o disk.iso test/img 
+	grub-mkrescue -d /usr/lib/grub/i386-pc -o disk.iso test/img 
 	qemu-system-i386 -cdrom disk.iso
 
 
