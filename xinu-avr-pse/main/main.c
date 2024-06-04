@@ -17,7 +17,7 @@ extern unsigned int tempo;
 
 void sonido(unsigned long frec, unsigned long dur, int pin);
 void cancion(int nargs, char *args[]);
-void speaker2(int nargs, char *args[]);
+void speaker(int nargs, char *args[]);
 
 
 
@@ -26,22 +26,22 @@ int main(void)
 	tempo = 2500;
 
 	/* speaker 1 */
-	resume(create(speaker2, 256, 20, "s1", 4, 10, 250, 13, 750));
+	resume(create(speaker, 256, 20, "s1", 4, 10, 250, 13, 750));
 	sleepms(5000);
 
 	/* speaker 2 */
-	resume(create(speaker2, 256, 20, "s2", 4, 120, 250, 5, 1750));
+	resume(create(speaker, 256, 20, "s2", 4, 120, 250, 5, 1750));
 	sleepms(5000);
 
 	/* speaker 3 */
-	resume(create(speaker2, 256, 20, "s3", 4, 500, 250, 2, 250));
+	resume(create(speaker, 256, 20, "s3", 4, 500, 250, 2, 250));
 
 	/* un programa embebido nunca finaliza */
 	for(;;);
 }
 
 
-void speaker2(int nargs, char *args[])
+void speaker(int nargs, char *args[])
 {
 	int frec = (int) args[0];
 	int dur = (int) args[1];
