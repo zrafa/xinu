@@ -6,6 +6,19 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <stdint.h>
+
+typedef struct {
+	uint8_t tccr2a;
+	uint8_t tccr2b;
+	uint8_t tcnt2;
+	uint8_t ocr2a;
+	uint8_t ocr2b;
+} volatile timer2_t;
+
+volatile timer2_t *timer2 = (timer2_t *)(0xb0);
+volatile unsigned char *timer2_timsk2 = (unsigned char *)(0x70);
+
 
 uint32	clktime;		/* Seconds since boot			*/
 unsigned long  count1000;	/* ms since last clock tick             */
@@ -32,15 +45,22 @@ void clkinit(void)
          * AVR atmega328p timer/clock init: interrupt every 1ms 
 	 * The AVR TIMER interrupt rutine is in clkhandler.c
          */
-	TCCR0B |= (1<<CS01) | (1<<CS00);   //clock select is divided by 64.
-	TCCR0A |= (1<<WGM01);              //sets mode to CTC
 
-	#if ATMEGA
-		OCR0A = 0xF9;                      //sets TOP to 124 so the timer will overflow every 1 ms.    
-	#else
-		OCR0A = 63;                      //sets TOP to 124 so the timer will overflow every 1 ms.    
-	#endif
-	TIMSK0 |= (1<<OCIE0A);              //Output Compare Match A Interrupt Enable
+	timer2->tccr2a = 0;
+	timer2->tccr2b = 0;
+	timer2->tcnt2 = 0;
+	*timer2_timsk2 = 0;
+	
+	timer2->tccr2a = 0b00000010;  // "toggle OC2A on match, CTC mode"
+        #if ATMEGA     // prescaler 128, ocr2a 125, 1 milisegundo
+	timer2->tccr2b = 0b00000101; // TCCR2B |= (1<<CS22) | (0<<CS21) | (1<<CS20);
+	timer2->ocr2a = 125;
+        #else    // prescaler 32, ocr2a 125, 1 milisegundo
+	timer2->tccr2b = 0b00000011; // TCCR2B |= (1<<CS21) | (1<<CS20);
+	timer2->ocr2a = 125;
+        #endif
+
+	*timer2_timsk2 = 0b00000010;  // TIMSK2 |= (1<<OCIE2A);
 
 	return;
 }
