@@ -20,3 +20,6 @@ const __flash char m11[] = "0x%08x    %d\n";
 const __flash char m12[] = "looping... press reset\n";
 const __flash char m13[] = "naminit (devices):\r\n";
 
+void avr_kprintf(char *s)
+{
+}

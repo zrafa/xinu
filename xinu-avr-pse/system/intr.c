@@ -1,4 +1,4 @@
-/* intr.S - enable, disable, restore, halt, pause, (ARM) */
+/* intr.S - enable, disable, restore, halt, pause, (AVR) */
 
 /* avr specific */
 

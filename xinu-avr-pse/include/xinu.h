@@ -43,6 +43,5 @@
 #include <string.h>
 #include <syscall.h>
 #include <avr_serial.h>
-#include <sync.h>
 
 #endif
