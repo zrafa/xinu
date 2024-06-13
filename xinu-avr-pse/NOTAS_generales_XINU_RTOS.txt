@@ -35,7 +35,7 @@ mas alta prioridad en estado de LISTO.
 Si no existe ningun proceso en estado de LISTO, entonces el kernel de XINU
 le asigna la CPU al proceso null.
 
-Esta versión de XINU utiliza el timer0 del AVR. POR LO QUE NO PUEDE 
+Esta versión de XINU utiliza el timer2 del AVR. POR LO QUE NO PUEDE 
 USARSE ESE TIMER! para la aplicación embebida.
 
 También utiliza inicialmente el UART a 9600. Se puede agregar en main/
@@ -44,7 +44,7 @@ aplicación de ejemplo).
 
 Cuando XINU RTOS "inicia", realiza dos veces un parpadeo del led de la placa.
 También informa la cantidad de memoria libre para usar para los procesos.
-En total, existen 1280 bytes de memoria libre.
+En total, existen aproximadamente 1200 bytes de memoria libre.
 system/initialize.c crea el proceso main, y le asigna 256 bytes de esa memoria
 libre.
 
@@ -65,17 +65,4 @@ send(pid, msg)	: enviar el mensaje msg (un entero) a pid (no bloqueante)
 receive()	: el proceso espera por un mensaje (system call bloqueante)
 recvclr()
 
-
-Funciones de biblioteca para utilizar semáforos
------------------------------------------------
-
-Existen 4 semáforos para utilizar (para implementar un mutex, o 
-un sincronismo productor-consumidor, o implementar un buffer circular, etc).
-
-Se puede ampliar la cantidad de semáforos editando include/sync.h
-(nota: utilizar muchos semáforos puede volver complejo la verificación
-del sistema).
-
-sync_wait(n)	: espera a que el semáforo n esté habilitado
-sync_signal(n)	: señaliza el semáforo n 
 
