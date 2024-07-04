@@ -16,7 +16,6 @@ void produce_y_consume(void)
 			serial_put_str("error\n");
 		r = n;
 		mutex_unlock(PROD);
-		serial_put_char('.');
 	}
 }
 
@@ -28,7 +27,9 @@ void main(void) {
 	r = n;
 	resume(create(produce_y_consume, 256, 20, "pro", 0));
 	resume(create(produce_y_consume, 256, 20, "pro", 0));
-	for(;;);
 
+	for(;;) {
+		serial_put_char('.');
+	}
 }
 
