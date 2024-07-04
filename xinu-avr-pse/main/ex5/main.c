@@ -1,3 +1,8 @@
+/*
+ * concurrencia con problemas: ejemplo de dos tareas con condicion de carrera
+ * 			       (region crítica)
+ */
+
 #include <xinu.h>
 
 int n,r;

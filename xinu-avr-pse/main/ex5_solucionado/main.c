@@ -1,3 +1,8 @@
+/*
+ * concurrencia solucionada: ejemplo de dos tareas con region critica, pero
+ * 			     sincronizadas (protegias) por un mutex
+ */
+
 #include <xinu.h>
 #include "mutex.h"
 

@@ -1,3 +1,8 @@
+/*
+ * main_buffer: aplicacion embebida que utiliza un buffer sincronizado
+ * 		para la comunicación entre dos tareas.
+ */
+
 #include <xinu.h>
 #include "buffer.h"
 
